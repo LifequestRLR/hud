@@ -1,0 +1,1361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>LifeQuest</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0a0c12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LifeQuest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0c12;--bg2:#11141d;--panel:#141826;--panel2:#1a1f30;--line:#262d42;--line2:#323a55;--ink:#e8ecf7;--muted:#8a93ad;--faint:#5b6480;
+    --gold:#f5c451;--gold-dim:#9c7c2e;--cyan:#46d6c8;--cyan-dim:#2a7d75;--red:#ef5f6b;--green:#5fd08a;--violet:#9a86ff;--orange:#f0974a;
+    --glow-gold:0 0 18px rgba(245,196,81,.45);
+    --z-rec:#8a93ad;--z-z2:#5fd08a;--z-tempo:#f0974a;--z-max:#ef5f6b;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{height:100%;background:#0a0c12;overscroll-behavior-y:none}
+  body{font-family:'Sora',system-ui,sans-serif;color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(1100px 600px at 78% -8%,rgba(70,214,200,.10),transparent 60%),radial-gradient(900px 600px at 8% 6%,rgba(245,196,81,.08),transparent 55%),linear-gradient(180deg,#0a0c12,#0a0c12 40%,#080a0f);}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+  .wrap{position:relative;z-index:1;max-width:880px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 26px) 16px calc(120px + env(safe-area-inset-bottom))}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .hud{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;position:relative;overflow:hidden;box-shadow:0 18px 40px -24px #000,inset 0 1px 0 rgba(255,255,255,.04);animation:rise .5s ease both}
+  .hud::after{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;background:linear-gradient(120deg,transparent 60%,rgba(245,196,81,.06))}
+  .hud-top{display:flex;align-items:center;gap:14px}
+  .sigil{flex:0 0 auto;width:54px;height:54px;display:grid;place-items:center;border:1px solid var(--line2);border-radius:13px;background:radial-gradient(circle at 30% 25%,#1d2336,#0f1320);box-shadow:var(--glow-gold)}
+  .who{flex:1;min-width:0}
+  .who h1{font-family:'Chakra Petch';font-size:20px;font-weight:700;line-height:1.1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .lvl-badge{font-family:'JetBrains Mono';font-size:11px;color:var(--gold);border:1px solid var(--gold-dim);padding:2px 7px;border-radius:6px;background:rgba(245,196,81,.07)}
+  .who .sub{color:var(--muted);font-size:12px;margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .streak{color:var(--gold);font-weight:600}
+  .clock{font-family:'JetBrains Mono';font-size:12px;color:var(--cyan)}
+  .installpill{font-family:'Chakra Petch';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#0a0c12;background:var(--cyan);border:none;border-radius:6px;padding:3px 8px;cursor:pointer;display:none}
+  .xpbar{margin-top:13px}
+  .xpbar .meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted);margin-bottom:5px}
+  .track{height:9px;border-radius:6px;background:#0c0f18;border:1px solid var(--line);overflow:hidden}
+  .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--gold-dim),var(--gold));box-shadow:var(--glow-gold);transition:width .7s cubic-bezier(.2,.7,.2,1)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:11px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:9px 10px;text-align:center}
+  .stat .ic{font-size:16px}.stat .v{font-family:'Chakra Petch';font-size:17px;font-weight:700;margin-top:2px}
+  .stat .l{font-size:9px;color:var(--muted);letter-spacing:.13em;text-transform:uppercase;margin-top:1px}
+
+  .tabs{display:flex;gap:6px;margin:18px 0 14px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;font-family:'Chakra Petch';font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:9px 14px;border-radius:10px;cursor:pointer;transition:.18s;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .tab:hover{color:var(--ink);border-color:var(--line2)}
+  .tab.on{color:#0a0c12;background:linear-gradient(180deg,var(--gold),var(--gold-dim));border-color:var(--gold);box-shadow:var(--glow-gold)}
+  .view{animation:fade .35s ease both}
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:13px;box-shadow:0 14px 30px -26px #000}
+  .card h2{font-family:'Chakra Petch';font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card h2 .n{margin-left:auto;font-family:'JetBrains Mono';font-size:11px;color:var(--muted);letter-spacing:0;text-transform:none}
+
+  .q{display:flex;align-items:center;gap:11px;padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);margin-bottom:8px;transition:.18s}
+  .q.done{opacity:.5}.q.done .qt{text-decoration:line-through}
+  .check{flex:0 0 auto;width:24px;height:24px;border-radius:7px;border:1.5px solid var(--line2);cursor:pointer;display:grid;place-items:center;color:transparent;transition:.18s;font-size:13px}
+  .q.done .check{background:var(--green);border-color:var(--green);color:#0a0c12}
+  .qbody{flex:1;min-width:0}.qt{font-size:14px;font-weight:500}
+  .qmeta{font-size:11px;color:var(--muted);margin-top:2px;display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .xp-tag{color:var(--gold);font-family:'JetBrains Mono';font-size:11px}
+  .tagpill{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:5px;border:1px solid var(--line2);color:var(--muted)}
+  .tag-body{color:var(--green);border-color:var(--cyan-dim)}.tag-mind{color:var(--violet);border-color:#473e7a}.tag-wealth{color:var(--gold);border-color:var(--gold-dim)}.tag-fight{color:var(--red);border-color:#5e2a30}
+  .del{flex:0 0 auto;color:var(--faint);cursor:pointer;font-size:16px;line-height:1;padding:4px;border-radius:6px}.del:hover{color:var(--red)}
+  .mq{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);margin-bottom:9px}
+  .mq .row{display:flex;align-items:center;gap:10px}.mq .qt{flex:1}
+  .mini{height:7px;border-radius:5px;background:#0c0f18;border:1px solid var(--line);margin-top:9px;overflow:hidden}
+  .mini>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan-dim),var(--cyan));border-radius:5px;transition:width .5s}
+  .mqctrl{display:flex;align-items:center;gap:8px;margin-top:9px}
+
+  .field{display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+  input,select,textarea{font-family:'Sora';font-size:13.5px;color:var(--ink);background:#0c0f18;border:1px solid var(--line2);border-radius:9px;padding:10px 11px;outline:none;transition:.18s}
+  input:focus,select:focus,textarea:focus{border-color:var(--cyan)}
+  input::placeholder,textarea::placeholder{color:var(--faint)}
+  input.grow,textarea.grow{flex:1;min-width:120px}
+  textarea{width:100%;resize:vertical;min-height:74px}
+  .btn{font-family:'Chakra Petch';letter-spacing:.06em;text-transform:uppercase;font-size:12px;cursor:pointer;border:1px solid var(--gold-dim);color:#0a0c12;background:linear-gradient(180deg,var(--gold),var(--gold-dim));padding:10px 15px;border-radius:9px;transition:.15s;white-space:nowrap}
+  .btn:hover{filter:brightness(1.08)}
+  .btn.ghost{background:transparent;color:var(--cyan);border-color:var(--cyan-dim)}.btn.ghost:hover{background:rgba(70,214,200,.08)}
+  .btn.sm{padding:7px 11px;font-size:11px}
+  .btn.danger{color:var(--red);background:transparent;border-color:#5e2a30}
+  .btn.block{width:100%;justify-content:center;display:flex;padding:13px;font-size:13px}
+  .stepper{display:flex;align-items:center;gap:6px}
+  .step{width:30px;height:30px;border-radius:8px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer;font-size:16px;display:grid;place-items:center}
+  .step:hover{border-color:var(--cyan)}
+
+  /* CAMPAIGN / PHASES */
+  .campaign{border:1px solid var(--gold-dim);border-radius:14px;background:linear-gradient(160deg,rgba(245,196,81,.07),var(--panel2));padding:15px;margin-bottom:13px;box-shadow:var(--glow-gold)}
+  .campaign .ct{font-family:'Chakra Petch';font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  .campaign .goal{font-family:'Chakra Petch';font-size:21px;font-weight:700;margin:5px 0}
+  .campaign .countdown{font-family:'JetBrains Mono';font-size:12px;color:var(--cyan);margin-bottom:10px}
+  .phases{display:flex;gap:7px;margin-top:8px}
+  .phase{flex:1;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:9px;text-align:center;position:relative;opacity:.5;transition:.25s}
+  .phase.active{opacity:1;border-color:var(--gold-dim);box-shadow:var(--glow-gold)}
+  .phase.complete{opacity:1;border-color:var(--cyan-dim)}
+  .phase .pi{font-size:17px}.phase .pn{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-family:'Chakra Petch';margin-top:3px}
+  .phase .pp{font-family:'JetBrains Mono';font-size:10px;color:var(--muted);margin-top:3px}
+  .phase .lock{position:absolute;top:6px;right:7px;font-size:10px}
+  .phasebar{height:6px;border-radius:4px;background:#0c0f18;border:1px solid var(--line);margin-top:11px;overflow:hidden}
+  .phasebar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:4px;transition:width .6s}
+
+  .upnext{border:1px solid var(--cyan-dim);border-radius:13px;background:linear-gradient(160deg,rgba(70,214,200,.06),var(--panel2));padding:15px;margin-bottom:12px}
+  .upnext .lbl{font-family:'Chakra Petch';font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan)}
+  .upnext .wname{font-family:'Chakra Petch';font-size:21px;font-weight:700;margin:4px 0 2px}
+  .upnext .exlist{font-size:12px;color:var(--muted);margin:8px 0 13px;line-height:1.7}
+  .queue{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+  .qchip{font-size:10.5px;font-family:'JetBrains Mono';color:var(--muted);border:1px solid var(--line);border-radius:7px;padding:4px 9px;background:var(--panel)}
+  .qchip.now{color:var(--gold);border-color:var(--gold-dim)}
+  .zonebadge{display:inline-block;font-family:'JetBrains Mono';font-size:10px;padding:2px 7px;border-radius:5px;margin-left:4px}
+  .zone-rec{color:var(--z-rec);border:1px solid var(--z-rec)}.zone-z2{color:var(--z-z2);border:1px solid var(--z-z2)}.zone-tempo{color:var(--z-tempo);border:1px solid var(--z-tempo)}.zone-max{color:var(--z-max);border:1px solid var(--z-max)}
+
+  .exrow{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:11px;background:var(--panel2);margin-bottom:8px}
+  .exrow.done{border-color:var(--cyan-dim);background:rgba(70,214,200,.05)}
+  .exrow .nm{font-size:14px;font-weight:500}.exrow .sc{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .exrow input{width:78px}
+  .sescard{border:1px solid var(--cyan-dim);box-shadow:0 0 22px -6px rgba(70,214,200,.3)}
+
+  /* ALARM / ROUTER */
+  .alarmcard{border:1px solid var(--orange);border-radius:14px;background:linear-gradient(160deg,rgba(240,151,74,.08),var(--panel2));padding:15px;margin-bottom:13px}
+  .alarmcard h2{color:var(--orange)}
+  .briefing{border:1px solid var(--line);border-radius:11px;background:var(--panel);padding:13px;margin-top:11px;font-size:13.5px;line-height:1.6}
+  .briefing .big{font-family:'Chakra Petch';font-size:26px;color:var(--orange);font-weight:700}
+  .briefing b{color:var(--cyan)}
+  .slotpill{display:inline-block;font-family:'Chakra Petch';font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin:2px 4px 2px 0}
+  .slot-before{color:var(--green);border:1px solid var(--cyan-dim)}.slot-after{color:var(--gold);border:1px solid var(--gold-dim)}.slot-blocked{color:var(--red);border:1px solid #5e2a30}
+
+  .progblock{border:1px solid var(--line);border-radius:12px;background:var(--panel2);margin-bottom:10px;overflow:hidden}
+  .proghead{display:flex;align-items:center;gap:10px;padding:12px;cursor:pointer}
+  .proghead .pn{font-family:'Chakra Petch';font-size:15px;flex:1}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--line2)}.dot.live{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .progbody{padding:12px}
+  .wcard{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;background:var(--panel)}
+  .wcard .wt{font-family:'Chakra Petch';font-size:13px;display:flex;align-items:center;gap:8px}
+  .wcard .exs{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.6}
+
+  .consist{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:6px}
+  .cbox{text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:10px}
+  .cbox .v{font-family:'Chakra Petch';font-size:22px;font-weight:700;color:var(--cyan)}
+  .cbox .l{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .hbar{display:flex;gap:4px;margin-top:10px;height:34px;align-items:flex-end}
+  .hbar i{flex:1;background:var(--line);border-radius:3px 3px 0 0;min-height:4px;transition:.3s}
+  .hbar i.hit{background:linear-gradient(180deg,var(--cyan),var(--cyan-dim))}
+
+  .metric{border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:12px;margin-bottom:10px}
+  .metric .top{display:flex;align-items:baseline;gap:8px}.metric .name{font-family:'Chakra Petch';font-size:14px}
+  .metric .cur{margin-left:auto;font-family:'JetBrains Mono';font-size:18px}.metric .unit{font-size:11px;color:var(--muted)}
+  .metric .goalnote{font-size:10.5px;color:var(--gold);margin-top:3px;font-family:'JetBrains Mono'}
+  .trend{font-family:'JetBrains Mono';font-size:11px;padding:2px 7px;border-radius:5px}
+  .trend.good{color:var(--green);background:rgba(95,208,138,.1)}.trend.bad{color:var(--red);background:rgba(239,95,107,.1)}.trend.flat{color:var(--muted);background:rgba(138,147,173,.1)}
+
+  .balance{text-align:center;padding:6px 0 12px}.balance .v{font-family:'Chakra Petch';font-size:40px;font-weight:700}.balance .v.pos{color:var(--green)}.balance .v.neg{color:var(--red)}
+  .balance .l{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .ledger .row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}.ledger .row:last-child{border:0}
+  .ledger .d{font-size:13px;flex:1}.ledger .dt{font-family:'JetBrains Mono';font-size:10.5px;color:var(--faint)}
+  .ledger .amt{font-family:'JetBrains Mono';font-size:14px}.ledger .amt.pos{color:var(--green)}.ledger .amt.neg{color:var(--red)}
+
+  .entry{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px 12px;margin-bottom:9px}
+  .entry .dt{font-family:'JetBrains Mono';font-size:10.5px;color:var(--cyan);margin-bottom:5px}
+  .entry .tx{font-size:13.5px;white-space:pre-wrap;line-height:1.55;color:#d4dbeb}
+  .prompt-chip{font-size:11px;color:var(--muted);border:1px dashed var(--line2);border-radius:8px;padding:8px 10px;margin-bottom:9px;cursor:pointer}.prompt-chip:hover{color:var(--cyan);border-color:var(--cyan-dim)}
+
+  .evrow{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line)}.evrow:last-child{border:0}
+  .evdate{font-family:'JetBrains Mono';font-size:11px;color:var(--cyan);min-width:62px}
+  .evtag{font-size:9px;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:5px;border:1px solid var(--line2)}
+  .ev-work{color:var(--orange);border-color:#6b4423}.ev-train{color:var(--green);border-color:var(--cyan-dim)}.ev-med{color:var(--violet);border-color:#473e7a}.ev-other{color:var(--muted)}
+
+  .empty{color:var(--faint);font-size:13px;text-align:center;padding:18px 6px;font-style:italic}
+  .hint{font-size:11.5px;color:var(--faint);margin-top:9px;line-height:1.5}
+  .info{font-size:12px;color:var(--muted);line-height:1.6;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px;margin-bottom:10px}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);z-index:50;background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--gold-dim);color:var(--gold);font-family:'Chakra Petch';letter-spacing:.06em;padding:11px 18px;border-radius:11px;box-shadow:var(--glow-gold);opacity:0;pointer-events:none;transition:.3s;text-align:center;max-width:90%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .modal-backdrop{position:fixed;inset:0;z-index:60;background:rgba(5,7,12,.78);backdrop-filter:blur(4px);display:none;align-items:flex-end;justify-content:center}
+  .modal-backdrop.show{display:flex;animation:fade .2s ease}
+  .modal{width:100%;max-width:560px;max-height:88vh;overflow-y:auto;background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--cyan-dim);border-radius:18px 18px 0 0;padding:18px 18px calc(24px + env(safe-area-inset-bottom));box-shadow:0 -20px 60px -10px #000;animation:slideup .28s cubic-bezier(.2,.7,.2,1)}
+  @keyframes slideup{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+  .modal .grab{width:42px;height:4px;border-radius:3px;background:var(--line2);margin:0 auto 14px}
+  .modal .mlbl{font-family:'Chakra Petch';font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan)}
+  .modal .mname{font-family:'Chakra Petch';font-size:23px;font-weight:700;margin:5px 0 2px}
+  .reward-box{border:1px solid var(--gold-dim);border-radius:12px;background:linear-gradient(160deg,rgba(245,196,81,.10),transparent);padding:13px;margin:13px 0}
+  .reward-box .rl{font-family:'Chakra Petch';font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  .reward-box .rt{font-size:13.5px;line-height:1.55;color:#e8ecf7;margin-top:6px}
+  .modal .mexs{font-family:'Chakra Petch';font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+
+  /* GUIDED PLAYER */
+  .player{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(900px 600px at 50% 20%,rgba(70,214,200,.10),transparent 60%),linear-gradient(180deg,#0b0e16,#070910);
+    padding:calc(env(safe-area-inset-top) + 20px) 22px calc(env(safe-area-inset-bottom) + 24px)}
+  .player.show{display:flex;animation:fade .25s ease}
+  .player-top{position:absolute;top:calc(env(safe-area-inset-top) + 16px);left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px}
+  .player-top .pstep{font-family:'JetBrains Mono';font-size:12px;color:var(--muted)}
+  .player-top .pquit{background:var(--panel2);border:1px solid var(--line2);color:var(--ink);width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer}
+  .pprogress{display:flex;gap:5px;margin-bottom:24px}
+  .pprogress i{width:22px;height:4px;border-radius:3px;background:var(--line2);transition:.3s}
+  .pprogress i.on{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+  .pprogress i.cleared{background:var(--green)}
+  .ring-wrap{position:relative;width:260px;height:260px;display:grid;place-items:center}
+  .ring-wrap svg.ring{position:absolute;inset:0;transform:rotate(-90deg)}
+  .ring-bg{fill:none;stroke:#1a1f30;stroke-width:9}
+  .ring-fg{fill:none;stroke:var(--gold);stroke-width:9;stroke-linecap:round;filter:drop-shadow(0 0 6px rgba(245,196,81,.5));transition:stroke-dashoffset 1s linear}
+  .fig-stage{width:150px;height:200px}
+  .pcount{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-family:'JetBrains Mono';font-size:15px;color:var(--gold);background:#0c0f18;border:1px solid var(--gold-dim);border-radius:8px;padding:2px 10px}
+  .pmove{font-family:'Chakra Petch';font-size:24px;font-weight:700;margin-top:22px;text-align:center}
+  .pinstr{font-size:14px;color:var(--muted);text-align:center;margin-top:8px;max-width:340px;line-height:1.55}
+  .pnext{font-family:'JetBrains Mono';font-size:11px;color:var(--faint);margin-top:14px;text-align:center}
+  .player-ctrls{display:flex;gap:10px;margin-top:24px}
+  .player-ctrls button{font-family:'Chakra Petch';letter-spacing:.06em;text-transform:uppercase;font-size:12px;cursor:pointer;border-radius:10px;padding:12px 22px}
+  .pc-pause{background:linear-gradient(180deg,var(--gold),var(--gold-dim));border:1px solid var(--gold-dim);color:#0a0c12}
+  .pc-skip{background:transparent;border:1px solid var(--cyan-dim);color:var(--cyan)}
+  .pdone-card{text-align:center}
+  .pdone-card .big{font-family:'Chakra Petch';font-size:30px;color:var(--gold);font-weight:700;margin-bottom:6px}
+
+  /* animated stick figure */
+  .figure{width:150px;height:200px;display:block;margin:0 auto;overflow:visible}
+  .figure line{stroke:var(--cyan);stroke-width:6;stroke-linecap:round;fill:none}
+  .figure .head{fill:var(--cyan);stroke:none}
+  .figure .fig,.figure .arms,.figure .head{transform-box:view-box}
+  .anim-sway .fig{transform-origin:60px 96px;animation:swayK 2.6s ease-in-out infinite}
+  @keyframes swayK{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(15deg)}}
+  .anim-twist .fig{transform-origin:60px 90px;animation:twistK 2.4s ease-in-out infinite}
+  @keyframes twistK{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.35)}}
+  .anim-circle .arms{transform-origin:60px 50px;animation:circK 2s linear infinite}
+  @keyframes circK{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .anim-hinge .fig{transform-origin:60px 96px;animation:hingeK 3s ease-in-out infinite}
+  @keyframes hingeK{0%,100%{transform:rotate(0)}45%,55%{transform:rotate(50deg)}}
+  .anim-nod .head{transform-origin:60px 36px;animation:nodK 2.4s ease-in-out infinite}
+  @keyframes nodK{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+  .anim-breathe .fig{transform-origin:60px 80px;animation:breK 3.4s ease-in-out infinite}
+  @keyframes breK{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  .anim-bob .fig{transform-origin:60px 96px;animation:bobK 2s ease-in-out infinite}
+  @keyframes bobK{0%,100%{transform:translateY(0) rotate(5deg)}50%{transform:translateY(11px) rotate(9deg)}}
+
+  /* MIND HUD */
+  .mtrack{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px;margin-bottom:8px}
+  .mtrack .trow{display:flex;align-items:center;gap:9px}
+  .mtrack .tic{font-size:16px}.mtrack .tname{font-family:'Chakra Petch';font-size:14px;flex:1}
+  .mtrack .tlvl{font-family:'JetBrains Mono';font-size:11px;color:var(--violet);border:1px solid #473e7a;border-radius:6px;padding:1px 7px}
+  .mtrack .tbar{height:7px;border-radius:5px;background:#0c0f18;border:1px solid var(--line);margin-top:9px;overflow:hidden}
+  .mtrack .tbar>i{display:block;height:100%;background:linear-gradient(90deg,#5a4ba6,var(--violet));border-radius:5px;transition:width .5s}
+  .mtrack .tmeta{font-size:10.5px;color:var(--muted);margin-top:6px;font-family:'JetBrains Mono'}
+  .mlbl2{font-family:'Chakra Petch';font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin-bottom:6px}
+  .cname{font-family:'Chakra Petch';font-size:18px;font-weight:700}
+  .csub{font-size:12px;color:var(--muted);margin:2px 0 12px}
+  .lesson{font-size:14px;line-height:1.65;color:#d4dbeb;margin-top:6px}
+  .qtext{font-size:15.5px;line-height:1.5;margin:8px 0 14px;font-weight:500}
+  .opt{display:block;width:100%;text-align:left;font-family:'Sora';font-size:14px;color:var(--ink);background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:12px 13px;margin-bottom:8px;cursor:pointer;transition:.15s}
+  .opt:hover{border-color:var(--cyan)}
+  .opt:disabled{cursor:default}
+  .opt.right{border-color:var(--green);background:rgba(95,208,138,.12);color:var(--green)}
+  .opt.wrong{border-color:var(--red);background:rgba(239,95,107,.12);color:var(--red)}
+  .fb{font-family:'Chakra Petch';font-size:14px;margin-top:6px}.fbok{color:var(--green)}.fbno{color:var(--red)}
+  .fbex{font-size:13px;color:var(--muted);line-height:1.55;margin-top:6px}
+
+  /* LIBRARY + READER */
+  .bookrow{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px;margin-bottom:8px;cursor:pointer;transition:.15s}
+  .bookrow:hover{border-color:var(--cyan-dim)}
+  .bookrow.bdone{border-color:var(--cyan-dim);background:rgba(70,214,200,.05)}
+  .bookrow .brtop{display:flex;align-items:center;gap:10px}
+  .bookrow .brt{font-family:'Chakra Petch';font-size:14px;flex:1}
+  .bookrow .brs{font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted)}
+  .bookrow .brbar{height:6px;border-radius:4px;background:#0c0f18;border:1px solid var(--line);margin-top:9px;overflow:hidden}
+  .bookrow .brbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan-dim),var(--cyan));border-radius:4px;transition:width .4s}
+  .reader{position:fixed;inset:0;z-index:80;display:none;flex-direction:column;background:linear-gradient(180deg,#11120e,#0b0c08);padding:calc(env(safe-area-inset-top) + 14px) 0 calc(env(safe-area-inset-bottom) + 8px)}
+  .reader.show{display:flex;animation:fade .25s ease}
+  .reader-top{display:flex;align-items:center;gap:12px;padding:0 18px 12px;border-bottom:1px solid #2a2a1f}
+  .reader-top .rtitle{flex:1;font-family:'Chakra Petch';font-size:15px;color:#f3ead2}
+  .reader-page{flex:1;overflow-y:auto;padding:20px 22px;font-family:'Sora';font-size:16.5px;line-height:1.72;color:#e7e2d3;max-width:680px;margin:0 auto;width:100%}
+  .reader-foot{padding:12px 18px 0;border-top:1px solid #2a2a1f;max-width:680px;margin:0 auto;width:100%}
+  .goalbar .gtxt{font-family:'JetBrains Mono';font-size:10.5px;color:var(--gold)}
+  .goalbar .gb{height:6px;border-radius:4px;background:#0c0f18;border:1px solid #2a2a1f;margin-top:5px;overflow:hidden}
+  .goalbar .gb>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:4px;transition:width .4s}
+  .reader-nav{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+  .rnav{font-family:'Chakra Petch';font-size:13px;letter-spacing:.04em;color:#0a0c12;background:linear-gradient(180deg,var(--gold),var(--gold-dim));border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
+  .rnav:disabled{opacity:.35;cursor:default;background:var(--panel2);color:var(--muted)}
+  .rpnum{font-family:'JetBrains Mono';font-size:12px;color:var(--muted)}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.phases{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hud" id="hud"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="view" class="view"></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-backdrop" id="modalBack"><div class="modal" id="modalBody"></div></div>
+<div class="player" id="player">
+  <div class="player-top"><span class="pstep" id="pStep"></span><button class="pquit" id="pQuit">✕</button></div>
+  <div class="pprogress" id="pProgress"></div>
+  <div class="ring-wrap">
+    <svg class="ring" viewBox="0 0 130 130"><circle class="ring-bg" cx="65" cy="65" r="58"/><circle class="ring-fg" id="ringFg" cx="65" cy="65" r="58"/></svg>
+    <div class="fig-stage" id="figStage"></div>
+    <div class="pcount" id="pCount">0:30</div>
+  </div>
+  <div class="pmove" id="pMove"></div>
+  <div class="pinstr" id="pInstr"></div>
+  <div class="pnext" id="pNext"></div>
+  <div class="player-ctrls"><button class="pc-pause" id="pPause">Pause</button><button class="pc-skip" id="pSkip">Skip →</button></div>
+</div>
+<div class="reader" id="reader">
+  <div class="reader-top"><span class="rtitle" id="rTitle"></span><button class="pquit" id="rClose">✕</button></div>
+  <div class="reader-page" id="rPage"></div>
+  <div class="reader-foot">
+    <div class="goalbar"><span class="gtxt" id="rGoalTxt"></span><div class="gb"><i id="rGoalBar"></i></div></div>
+    <div class="reader-nav"><button class="rnav" id="rPrev">‹ Prev</button><span class="rpnum" id="rPageNum"></span><button class="rnav" id="rNext">Next ›</button></div>
+  </div>
+</div>
+<input type="file" id="bookFile" accept=".txt,.md,text/plain" style="display:none">
+<input type="file" id="icsInput" accept=".ics" style="display:none">
+
+<script>
+//================= STORAGE ADAPTER =================
+const HAS_CLAUDE = typeof window.storage!=='undefined' && window.storage && typeof window.storage.get==='function';
+const store={
+  async get(k){ if(HAS_CLAUDE){try{const r=await window.storage.get(k);return r&&r.value?r.value:null;}catch(e){return null;}} try{return localStorage.getItem(k);}catch(e){return null;} },
+  async set(k,v){ if(HAS_CLAUDE){try{await window.storage.set(k,v);}catch(e){}return;} try{localStorage.setItem(k,v);}catch(e){} }
+};
+const KEY="lifequest:state";
+const today=()=>new Date().toISOString().slice(0,10);
+function id(){return Math.random().toString(36).slice(2,9);}
+
+//================= HR ZONES (from Adlon test) =================
+const HR={ recLo:124,recHi:129, z2Lo:139,z2Hi:154, vetDrempel:149, tempoLo:154,tempoHi:174, omslag:174, max:185 };
+function zoneBadge(z){const m={rec:['Recovery 124-129','zone-rec'],z2:['Z2 139-154','zone-z2'],tempo:['Tempo 154-174','zone-tempo'],max:['Max >174','zone-max']};const[t,c]=m[z]||['',''];return z?`<span class="zonebadge ${c}">${t} bpm</span>`:'';}
+
+//================= CAMPAIGN: 3 PHASES (from coach's plan) =================
+const PHASES=[
+  {key:'rebuild', name:'Aerobic Rebuild', icon:'🫁', weeks:3, sessionsToClear:12,
+   blurb:'Rebuild the engine. Z2 base so explosiveness lasts longer. No ego pace.'},
+  {key:'engine',  name:'Lactate Engine', icon:'⚙️', weeks:4, sessionsToClear:16,
+   blurb:'Attack the fast acidosis. Intervals + sprint repeatability. Recover between explosive actions.'},
+  {key:'power',   name:'Fight Conditioning', icon:'🥊', weeks:99, sessionsToClear:9999,
+   blurb:'Killer athleticism. Power, repeat sprints, fight pace under fatigue. Peak for September.'},
+];
+const FIGHT_TARGET="2026-09-01";
+const GYM_CLOSE="2026-06-14", GYM_REOPEN="2026-08-15";
+
+//================= WORKOUT LIBRARY per phase (bar/dip/outdoor only) =================
+function buildPrograms(){
+  function W(name,xp,phase,zone,reward,exs){return {id:id(),name,xp,phase,zone,reward,exercises:exs.map(e=>({id:id(),name:e[0],scheme:e[1],unit:e[2]||'',link:e[3]||null}))};}
+  // PHASE 1 — Aerobic Rebuild
+  const p1=[
+    W('Zone 2 Run',55,'rebuild','z2','Grows your aerobic engine so explosiveness lasts longer and you recover faster between exchanges. Your coach calls this the missing link — the base everything else is built on.',[['Z2 steady run','45–60 min · HR 139–154 · nose-breathe, can still talk','min','m_z2']]),
+    W('Full-Body Strength',60,'rebuild',null,'Pulling strength + core for force transfer. Builds relative strength — more output without adding mass that would slow you down.',[['Pull-ups','5× max reps','reps','m_pull'],['Dips','5× max','reps','m_dip'],['Push-ups','3×20','reps'],['Walking lunges','3×20 steps'],['Hanging knee raises','3×15','reps'],['Plank','3×60s','s']]),
+    W('Sprint Technique',45,'rebuild',null,'Cleaner mechanics = more efficient, explosive first steps. Sprinting literally reshapes your athletic profile — entries, exits, scrambles get faster.',[['A-skips','3×20m'],['High knees','3×20m'],['Accelerations','6×40m @ 80%, walk back','reps'],['Strides','4×60m relaxed']]),
+    W('Long Conditioning',50,'rebuild','z2','Deepens base endurance and recovery capacity — the tank that lets you keep pace into later rounds.',[['Easy jog/walk mix','45–60 min · HR ≤154','min']]),
+    W('Recovery / Mobility',25,'rebuild','rec','Resets the nervous system and tendons. This is what prevents the overtraining that kills explosiveness — recovery IS training.',[['Mobility flow','15 min'],['Walk','20–30 min · HR 124–129','min'],['Stretch','full body']]),
+  ];
+  // PHASE 2 — Lactate Engine
+  const p2=[
+    W('Tempo Intervals',80,'engine','tempo','Raises lactate tolerance so you acidify slower at fight pace. This directly attacks your #1 limiter from the Adlon test — the fast "verzuring".',[['Warm-up','10 min easy','min'],['6× 2min hard / 2min easy','hard = HR 165–174','reps'],['Cool-down','10 min','min']]),
+    W('Sprint Repeatability',85,'engine','max','Repeat-sprint power — stay explosive after multiple scrambles instead of gassing. Trains exactly what MMA is: repeated explosive efforts.',[['Warm-up','10 min + drills'],['10× 15s sprint / 45s walk','all-out sprints (→20s/40s as you progress)','reps'],['Cool-down','10 min']]),
+    W('Zone 2 Run',55,'engine','z2','Keeps growing the aerobic base under the harder work — protects recovery so the intervals actually stick.',[['Z2 steady run','60 min · HR 139–154','min','m_z2']]),
+    W('Upper Power',65,'engine',null,'Explosive pulling and pushing — stronger shots, sprawls and clinch control while staying light.',[['Pull-ups','5× max','reps','m_pull'],['Explosive negatives','4×5'],['Dips','5× max','reps','m_dip'],['Plyo push-ups','4×8','reps'],['Hollow hold','3×45s','s'],['Side plank','3×40s/side','s']]),
+    W('Fight Circuit',75,'engine','max','Trains MMA energy systems directly — power output while fatigued, less gassing between exchanges.',[['5 rounds:','—'],['Sprint 100m','×5','reps'],['Burpees','×10','reps'],['Sprawls','×10','reps'],['Pull-ups','×8','reps'],['Rest','20s between rounds']]),
+  ];
+  // PHASE 3 — Fight Conditioning
+  const p3=[
+    W('Sprint + Lower',80,'power','max','Hip explosiveness and acceleration — faster first meters, sharper entries and exits.',[['Drills','A-skips, bounds, ankling'],['Sprints','10×20m + 6×40m full explosion','reps'],['Bulgarian split squat','4×12/leg','reps'],['Jump squats','4×10','reps'],['Single-leg RDL','4×12/leg']]),
+    W('Upper Power',70,'power',null,'Peak relative strength and explosive pull — chest-to-bar power for the clinch and takedowns.',[['Pull-ups','5× max','reps','m_pull'],['Chin-ups','4× max','reps'],['Dips','5× max','reps','m_dip'],['Archer push-ups','4×6/side'],['Rotational core','4×10/side'],['Hanging raises','3×15','reps']]),
+    W('Zone 2 — secret weapon',55,'power','z2','Even in peak phase, Z2 keeps recovery high so the hard work compounds. Your coach: this is the secret weapon elite fighters build for years.',[['Z2 run','60 min · HR 139–154','min','m_z2']]),
+    W('Interval + Plyo',85,'power','max','Elastic power + repeat sprint — snappy, repeatable explosions that don\'t fade as the round goes on.',[['8–12× 20s sprint / 40s rest','repeat sprint power','reps'],['Broad jumps','4×5'],['Tuck jumps','4×10','reps'],['Lateral bounds','4×10/side'],['Stair jumps','4×8','reps']]),
+    W('Athlete Circuit',80,'power','max','Full-body fight conditioning under fatigue — the closest thing to championship-round output.',[['5 rounds:','—'],['Pull-ups','×8','reps'],['Dips','×15','reps'],['Burpees','×10','reps'],['Sprint 100m','×1'],['Walking lunges','×20'],['Push-ups','×20','reps']]),
+    W('Long Conditioning',60,'power','tempo','Simulates round-to-round recovery — the engine that keeps your pace high when others fade.',[['Fartlek / hill / stairs','45–60 min · 1min hard / 1min easy ×15–20','min']]),
+    W('MMA Time Trial',95,'power','max','Benchmark session — proves the engine work is landing. A faster time means slower acidosis and a bigger tank. Log it and watch the trend.',[['5K all-out OR fight-pace test','log your time','min','m_5k']]),
+  ];
+  return [
+    {id:'prog_rebuild',name:'Phase 1 · Aerobic Rebuild',phase:'rebuild',active:true,queuePos:0,order:p1.map(w=>w.id),workouts:p1,_open:false},
+    {id:'prog_engine', name:'Phase 2 · Lactate Engine', phase:'engine', active:false,queuePos:0,order:p2.map(w=>w.id),workouts:p2,_open:false},
+    {id:'prog_power',  name:'Phase 3 · Fight Conditioning',phase:'power',active:false,queuePos:0,order:p3.map(w=>w.id),workouts:p3,_open:false},
+  ];
+}
+
+//================= DEFAULT STATE (personalized) =================
+const DEFAULT={
+  name:"Bilal", totalXp:0, streak:0, lastActiveDay:null, _counts:{},
+  phaseIdx:0, phaseSessions:0,
+  dailies:[
+    {id:id(),title:"Protein 1.8–2.2g/kg (≈145–175g)",xp:20,tag:"body",done:false,day:today(),
+     desc:"Hit roughly 145–175g protein across the day. You're building, not cutting — eat for output. Spread it over meals and lean on whole sources."},
+    {id:id(),title:"Hydration + salt/minerals",xp:10,tag:"body",done:false,day:today(),
+     desc:"Plenty of water plus enough salt and minerals. Your plan flags this directly for performance and recovery, especially around conditioning sessions."},
+    {id:id(),title:"Mobility flow (5 min)",xp:20,tag:"body",done:false,day:today(),
+     desc:"A short follow-along mobility routine to keep joints and tendons healthy and your nervous system loose. Tap Start and follow each move with the timer.",
+     guide:[
+       {name:"Neck rolls",instr:"Slow circles, 5 each direction. Ease the tension out.",dur:30,anim:"nod"},
+       {name:"Arm circles",instr:"Big circles forward, then reverse halfway through.",dur:30,anim:"circle"},
+       {name:"Standing side bend",instr:"Reach one arm overhead, lean to the side. Switch at halfway.",dur:40,anim:"sway"},
+       {name:"Torso twists",instr:"Rotate side to side, let your eyes lead the turn.",dur:30,anim:"twist"},
+       {name:"Hip circles",instr:"Hands on hips, draw big circles — both directions.",dur:30,anim:"circle"},
+       {name:"Deep lunge reach",instr:"Step into a lunge, drop the hips, reach up. Switch at halfway.",dur:40,anim:"bob"},
+       {name:"Hamstring hinge",instr:"Hinge at the hips, reach toward your toes, soft knees.",dur:30,anim:"hinge"},
+       {name:"Spinal flex (cat-cow)",instr:"Round and arch the spine slowly, in time with your breath.",dur:30,anim:"breathe"},
+     ]},
+    {id:id(),title:"7–9h sleep locked in",xp:20,tag:"body",done:false,day:today(),
+     desc:"Lock 7–9h. Non-negotiable for recovery and nervous-system reset — use the Alarm tab to back-calculate a cycle-aligned bedtime."},
+  ],
+  quests:[
+    {id:id(),title:"Pull-ups: reach 15–20 strict",cur:0,target:20,tag:"fight"},
+    {id:id(),title:"Dips: reach 25+ deep",cur:0,target:25,tag:"fight"},
+    {id:id(),title:"Clear Phase 1 (Aerobic Rebuild)",cur:0,target:12,tag:"fight"},
+  ],
+  metrics:[
+    {id:"m_5k",name:"5K time",unit:"min",lowerBetter:true,goal:"faster, less acidosis",log:[]},
+    {id:"m_bw",name:"Bodyweight",unit:"kg",lowerBetter:false,goal:"HOLD 79–82 — do not cut",log:[{day:"2025-11-26",v:80.7},{day:"2026-01-14",v:79.6}]},
+    {id:"m_pull",name:"Pull-ups (max)",unit:"reps",lowerBetter:false,goal:"target 15–20 strict",log:[]},
+    {id:"m_dip",name:"Dips (max)",unit:"reps",lowerBetter:false,goal:"target 25+ deep",log:[]},
+    {id:"m_z2",name:"Z2 run duration",unit:"min",lowerBetter:false,goal:"build aerobic base",log:[]},
+    {id:"m_vo2",name:"VO2max",unit:"ml/kg/min",lowerBetter:false,goal:"baseline 54 (excellent)",log:[{day:"2026-01-14",v:54}]},
+  ],
+  programs:buildPrograms(),
+  session:null, sessions:[],
+  ledger:[], balance:0, journal:[], wakeTime:"07:00",
+  mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}},
+  events:[], // imported calendar
+  alarm:{wakeBy:"07:00", workStart:"", workEnd:""},
+};
+
+let S=structuredClone(DEFAULT), booted=false, saveT;
+async function load(){
+  const raw=await store.get(KEY);
+  if(raw){try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(raw));}catch(e){}}
+  // seed upcoming events on first run
+  if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
+  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{};
+  rolloverDay(); booted=true; renderAll();
+}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S)),250);}
+function rolloverDay(){
+  const t=today();
+  if(S.dailies.length && S.dailies[0].day!==t){
+    const did=S.dailies.some(d=>d.done);
+    const yest=new Date(Date.now()-864e5).toISOString().slice(0,10);
+    if(S.lastActiveDay===yest&&did)S.streak+=1; else if(did)S.streak=Math.max(S.streak,1); else S.streak=0;
+    S.dailies=S.dailies.map(d=>({...d,done:false,day:t}));
+  }
+}
+// events extracted from your .ics (upcoming one-offs; recurring shifts you import fresh)
+const SEED_EVENTS=[
+  {d:"2026-06-02",t:"13:30",te:"14:30",s:"Tandarts",c:"med"},
+  {d:"2026-09-10",t:"22:00",te:"23:55",s:"Voodoo Village",c:"other"},
+];
+
+//================= XP / LEVEL =================
+function levelInfo(xp){let lvl=1,need=200,acc=0;while(xp>=acc+need){acc+=need;lvl++;need=Math.round(need*1.18);}return{lvl,into:xp-acc,need,pct:Math.round((xp-acc)/need*100)};}
+function awardXp(n){S.totalXp+=n;S.lastActiveDay=today();if(S.streak===0)S.streak=1;}
+function bumpCount(tag,d=1){S._counts=S._counts||{};S._counts[tag]=(S._counts[tag]||0)+d;}
+function daysToFight(){return Math.max(0,Math.ceil((new Date(FIGHT_TARGET)-new Date())/864e5));}
+
+//================= HEADER =================
+function renderHud(){
+  const L=levelInfo(S.totalXp);
+  const sigil=`<svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 2 L21 7 V17 L12 22 L3 17 V7 Z" stroke="#f5c451" stroke-width="1.3"/><path d="M12 6 L17 9 V15 L12 18 L7 15 V9 Z" fill="#1d2336" stroke="#46d6c8" stroke-width="1"/><circle cx="12" cy="12" r="2.1" fill="#f5c451"/></svg>`;
+  const now=new Date(),clock=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),dateStr=now.toLocaleDateString([],{weekday:'short',day:'numeric',month:'short'});
+  document.getElementById('hud').innerHTML=`
+    <div class="hud-top"><div class="sigil">${sigil}</div>
+      <div class="who"><h1 contenteditable="true" id="nameEdit" spellcheck="false" style="outline:none">${esc(S.name)}<span class="lvl-badge">LVL ${L.lvl}</span></h1>
+        <div class="sub"><span class="streak">🔥 ${S.streak}d</span><span>·</span><span class="clock">${dateStr} · ${clock}</span><span>·</span><span style="color:var(--gold)">🎯 ${daysToFight()}d to target</span><button class="installpill" id="installBtn">Install</button></div></div></div>
+    <div class="xpbar"><div class="meta"><span>XP ${L.into}/${L.need}</span><span>TOTAL ${S.totalXp}</span></div><div class="track"><div class="fill" style="width:${L.pct}%"></div></div></div>
+    <div class="stats">${chip('🫁','VO2MAX',(lastV('m_vo2')??'–'))}${chip('💪','PULL/DIP',(lastV('m_pull')??'–')+'/'+(lastV('m_dip')??'–'))}${chip('⚖️','WEIGHT',(lastV('m_bw')??'79.6')+'kg')}${chip('🥊','SESSIONS',S.sessions.length)}</div>`;
+  const ne=document.getElementById('nameEdit');
+  ne.addEventListener('blur',()=>{S.name=ne.textContent.trim()||"Bilal";save();});
+  ne.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ne.blur();}});
+  if(deferredPrompt){const b=document.getElementById('installBtn');if(b)b.style.display='inline-block';}
+  const ib=document.getElementById('installBtn');if(ib)ib.onclick=doInstall;
+}
+function chip(ic,l,v){return `<div class="stat"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`;}
+function lastV(mid){const m=S.metrics.find(x=>x.id===mid);return m&&m.log.length?m.log[m.log.length-1].v:null;}
+function fmt(n){return (Math.round(n*100)/100).toLocaleString();}
+
+//================= TABS =================
+const TABS=[{k:'camp',ic:'🥊',label:'Camp'},{k:'train',ic:'🏋️',label:'Train'},{k:'alarm',ic:'⏰',label:'Alarm'},{k:'cal',ic:'📅',label:'Agenda'},{k:'quests',ic:'🗡️',label:'Quests'},{k:'stats',ic:'📈',label:'Stats'},{k:'gold',ic:'💰',label:'Treasury'},{k:'mind',ic:'🧠',label:'Mind'}];
+let active='camp';
+function renderTabs(){
+  document.getElementById('tabs').innerHTML=TABS.map(t=>`<button class="tab ${t.k===active?'on':''}" data-k="${t.k}"><span>${t.ic}</span>${t.label}</button>`).join('');
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{active=b.dataset.k;renderTabs();renderView();});
+}
+function renderView(){
+  const v=document.getElementById('view');v.classList.remove('view');void v.offsetWidth;v.classList.add('view');
+  v.innerHTML=({camp:viewCamp,train:viewTrain,alarm:viewAlarm,cal:viewCal,quests:viewQuests,stats:viewStats,gold:viewGold,mind:viewMind}[active])();
+  bind[active]&&bind[active]();
+}
+
+//================= CAMP (campaign overview) =================
+function viewCamp(){
+  const pi=S.phaseIdx, ph=PHASES[pi];
+  const need=ph.sessionsToClear, have=S.phaseSessions, pct=Math.min(100,Math.round(have/need*100));
+  const phaseEls=PHASES.map((p,i)=>{
+    const st=i<pi?'complete':(i===pi?'active':'');
+    const lock=i>pi?'🔒':(i<pi?'✓':'');
+    const prog=i<pi?'cleared':(i===pi?`${have}/${need}`:'locked');
+    return `<div class="phase ${st}"><span class="lock">${lock}</span><div class="pi">${p.icon}</div><div class="pn">${p.name}</div><div class="pp">${prog}</div></div>`;
+  }).join('');
+  return `
+  <div class="campaign">
+    <div class="ct">⚔️ Off-Season Campaign · MMA 141 Hasselt</div>
+    <div class="goal">Road to Fight-Ready</div>
+    <div class="countdown">${daysToFight()} days out · now: ${ph.icon} ${ph.name}</div>
+    <div class="info" style="margin:0 0 4px;background:transparent;border:0;padding:0;color:#d4dbeb">${ph.blurb}</div>
+    <div class="phases">${phaseEls}</div>
+    <div class="phasebar"><i style="width:${pct}%"></i></div>
+    <div class="hint" style="color:var(--muted)">Clear ${need} sessions in this phase to unlock the next. Each session forges you sharper for September.</div>
+  </div>
+  <div class="card">
+    <h2>🎯 Fight-Camp Objectives <span class="n">conquer to level up</span></h2>
+    ${S.quests.map(mainQuest).join('')}
+    <div class="field"><input class="grow" id="mqTitle" placeholder="New objective…"><input id="mqTarget" type="number" value="10" style="width:74px"><button class="btn" id="mqAdd">Add</button></div>
+  </div>
+  <div class="card">
+    <h2>📋 Your Profile <span class="n">from Adlon + DEXA</span></h2>
+    <div class="info">
+      <b style="color:var(--cyan)">VO2max 54</b> (Jan baseline — likely dipped after 3 quiet months; log a fresh value in Stats). <b style="color:var(--cyan)">8.08% body fat</b> at 80kg — combat-lean.<br>
+      Key limiter: <b style="color:var(--red)">fast acidosis</b> above HR ~174. The whole campaign attacks this: aerobic base → lactate tolerance → repeat-sprint power.<br>
+      <span style="color:var(--gold)">⚠ Do NOT cut.</span> You're already lean — this is a performance build. Eat for output: 1.8–2.2g protein/kg, carbs around training, 7–9h sleep.
+    </div>
+    <div class="hint">HR zones baked into every cardio session — Recovery 124–129 · Z2 139–154 · Tempo 154–174 · Max >174 · peak 185.</div>
+  </div>
+  <div class="card">
+    <h2>📅 Your Week <span class="n">coached → solo</span></h2>
+    <div class="info" style="margin:0 0 10px">
+      <b style="color:var(--cyan)">Until Jun 14</b> — coached at MMA 141 Hasselt: Mon grappling · Tue MMA · Wed S&amp;C · Thu pads + conditioning · Fri sparring · Sat rest · Sun S&amp;C + sparring.<br><br>
+      <b style="color:var(--orange)">Jun 14 → mid-Aug</b> — gym closed. <b>Solo mode: this app is your coach.</b> The phase programs replace your sessions — bar, dips &amp; outdoor only, exactly what your plan is built on. Skills pause; engine, lactate tolerance and repeat-sprint power get built so you walk back in sharper than you left.
+    </div>
+    <div class="hint">When the gym reopens, keep the app for the solo conditioning a coach can't watch (Z2, sprints) and let mat time cover skills.</div>
+  </div>`;
+}
+
+//================= TRAIN =================
+function activeProgram(){return S.programs.find(p=>p.active)||S.programs[0];}
+function workoutById(p,wid){return p?p.workouts.find(w=>w.id===wid):null;}
+function nextWorkout(p){if(!p||!p.order.length)return null;return workoutById(p,p.order[p.queuePos%p.order.length]);}
+
+function viewTrain(){
+  if(S.session)return sessionView();
+  const p=activeProgram(), nw=nextWorkout(p);
+  const last7=S.sessions.filter(s=>(Date.now()-new Date(s.day).getTime())<7*864e5).length;
+  const upnext=nw?`
+    <div class="upnext">
+      <div class="lbl">⚡ Up next · ${esc(p.name)}</div>
+      <div class="wname">${esc(nw.name)} ${zoneBadge(nw.zone)}</div>
+      <div class="exlist">${nw.exercises.map(e=>`• ${esc(e.name)} <span style="color:var(--faint)">— ${esc(e.scheme)}</span>`).join('<br>')}</div>
+      <button class="btn block" id="beginBtn">👁 View session · +${nw.xp} XP</button>
+      <div class="queue">${p.order.map((wid,i)=>{const w=workoutById(p,wid);return `<span class="qchip ${i===p.queuePos%p.order.length?'now':''}">${esc(w?w.name:'?')}</span>`;}).join('')}</div>
+      <div class="field" style="margin-top:11px"><button class="btn ghost sm" id="coachBtn">🎯 Coach's pick</button><button class="btn ghost sm" id="skipBtn">Skip →</button><button class="btn ghost sm" id="shuffleBtn">⟳ Shuffle</button></div>
+      <div class="hint">No fixed weekdays — it advances whenever you actually train. Work always wins: if a shift eats the session, do it before/after (see ⏰ Alarm).</div>
+    </div>`:`<div class="card"><div class="empty">No workouts in active phase.</div></div>`;
+  return `${upnext}
+  <div class="card"><h2>📊 Consistency <span class="n">last 14 days</span></h2>
+    <div class="consist"><div class="cbox"><div class="v">${last7}</div><div class="l">last 7 days</div></div><div class="cbox"><div class="v">${S.sessions.length}</div><div class="l">total</div></div><div class="cbox"><div class="v">${S.streak}</div><div class="l">day streak</div></div></div>
+    <div class="hbar">${heatStrip()}</div>
+    <div class="hint">Consistency is your biggest weapon. 80% steady &gt; occasional war. Not every session has to destroy you.</div></div>
+  <div class="card"><h2>🗂️ Phases <span class="n">${S.programs.length}</span></h2>${S.programs.map(programBlock).join('')}</div>
+  <div class="card"><h2>📜 Session History <span class="n">${S.sessions.length}</span></h2>
+    ${S.sessions.length?S.sessions.slice().reverse().slice(0,12).map(s=>`<div class="q"><div class="qbody"><div class="qt">${esc(s.name)}</div><div class="qmeta"><span class="mono" style="color:var(--cyan)">${s.day}</span><span>${s.count} logged</span>${s.note?`<span style="color:var(--muted)">“${esc(s.note)}”</span>`:''}</div></div></div>`).join(''):`<div class="empty">No sessions yet. Begin your first above.</div>`}</div>`;
+}
+function heatStrip(){let out='';for(let i=13;i>=0;i--){const d=new Date(Date.now()-i*864e5).toISOString().slice(0,10);const hit=S.sessions.some(s=>s.day===d);out+=`<i class="${hit?'hit':''}" style="height:${hit?(18+Math.random()*16):6}px" title="${d}"></i>`;}return out;}
+function programBlock(p){
+  const isPhase=PHASES.findIndex(x=>x.key===p.phase), curPhase=S.phaseIdx;
+  const locked=isPhase>curPhase;
+  return `<div class="progblock" data-pid="${p.id}">
+    <div class="proghead" data-act="toggle"><span class="dot ${p.active?'live':''}"></span><span class="pn">${esc(p.name)}${locked?' 🔒':''}</span><span class="mono" style="font-size:11px;color:var(--muted)">${p.workouts.length} workouts</span></div>
+    ${p._open?`<div class="progbody">
+      ${!p.active&&!locked?`<button class="btn ghost sm" data-act="activate" style="margin-bottom:10px">Set active</button>`:''}
+      ${locked?`<div class="hint" style="margin:0 0 8px;color:var(--orange)">Locked — clear the current phase to unlock.</div>`:''}
+      ${p.workouts.map(w=>`<div class="wcard"><div class="wt">${esc(w.name)} ${zoneBadge(w.zone)}<span class="xp-tag" style="margin-left:auto">+${w.xp} XP</span></div><div class="exs">${w.exercises.map(e=>`◦ ${esc(e.name)} — ${esc(e.scheme)}${e.link?` <span style="color:var(--gold)">↳ ${esc(metricName(e.link))}</span>`:''}`).join('<br>')}</div></div>`).join('')}
+    </div>`:''}
+  </div>`;
+}
+function metricName(i){const m=S.metrics.find(x=>x.id===i);return m?m.name:'metric';}
+function sessionView(){
+  const s=S.session;
+  return `<div class="card sescard"><h2>🔴 Live Session <span class="n">${esc(s.name)}</span></h2>
+    ${s.zone?`<div style="margin-bottom:10px">${zoneBadge(s.zone)}</div>`:''}
+    ${s.exercises.map(e=>`<div class="exrow ${e.done?'done':''}" data-eid="${e.id}"><div class="check" data-act="exdone">✓</div><div class="qbody"><div class="nm">${esc(e.name)}</div><div class="sc">${esc(e.scheme)}</div></div>${e.unit?`<input type="number" step="0.01" class="exVal" placeholder="${esc(e.unit)}" value="${e.val??''}">`:''}</div>`).join('')}
+    <textarea id="sesNote" placeholder="How did it feel? Energy, acidosis, recovery…">${esc(s.note||'')}</textarea>
+    <div class="field" style="margin-top:10px"><button class="btn block" id="finishBtn">✓ Finish · +${s.xp} XP</button></div>
+    <div class="field"><button class="btn ghost sm" id="abandonBtn">Abandon</button></div></div>`;
+}
+
+//================= ALARM / WORK-vs-TRAINING ROUTER =================
+function toMin(h){if(!h)return null;const[a,b]=h.split(':').map(Number);return a*60+b;}
+function fromMin(t){t=((t%1440)+1440)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
+function viewAlarm(){
+  const a=S.alarm, p=activeProgram(), nw=nextWorkout(p);
+  return `<div class="alarmcard"><h2>⏰ Alarm & Training Router</h2>
+    <div class="info" style="margin:0 0 10px">Tell me tomorrow's shift. Work wins — if training clashes with a <b>dienst</b>, I route it before or after, and tell you the alarm + bedtime to make it happen.</div>
+    <div class="field"><span style="color:var(--muted);font-size:12px;align-self:center;min-width:80px">Must be up by</span><input id="aWake" type="time" value="${a.wakeBy}" style="width:110px"></div>
+    <div class="field"><span style="color:var(--muted);font-size:12px;align-self:center;min-width:80px">Shift start</span><input id="aWStart" type="time" value="${a.workStart}" style="width:110px"><span style="color:var(--muted);font-size:12px;align-self:center">end</span><input id="aWEnd" type="time" value="${a.workEnd}" style="width:110px"></div>
+    <div class="field"><button class="btn block" id="briefBtn">⚡ Generate briefing</button></div>
+    <div id="briefingOut"></div>
+  </div>
+  <div class="card"><h2>🌙 Cycle-Aligned Bedtime <span class="n">90-min cycles</span></h2>
+    <div class="info" style="margin:0">Based on "must be up by ${a.wakeBy}", best bedtimes: <b style="color:var(--cyan)">${fromMin(toMin(a.wakeBy)-(6*90+15))}</b> (9h) or <b style="color:var(--cyan)">${fromMin(toMin(a.wakeBy)-(5*90+15))}</b> (7.5h). Coach wants 7–9h — non-negotiable for recovery.</div>
+  </div>`;
+}
+function generateBriefing(){
+  const a=S.alarm, p=activeProgram(), nw=nextWorkout(p);
+  const ws=toMin(a.workStart), we=toMin(a.workEnd), wake=toMin(a.wakeBy);
+  const sessName=nw?nw.name:"training";
+  const isCardio=nw&&nw.zone;
+  let html='', slot='', alarm='', note='';
+  if(ws===null||we===null){
+    // no shift -> free day
+    slot='<span class="slotpill slot-before">Open day</span>';
+    alarm=a.wakeBy;
+    note=`No shift entered — full freedom. Hit <b>${esc(sessName)}</b> when fresh, ideally morning.`;
+  } else {
+    const beforeRoom = ws - wake;           // minutes between waking and shift
+    const needBefore = isCardio?90:75;       // rough session+commute window
+    if(beforeRoom>=needBefore+20){
+      slot='<span class="slotpill slot-before">Before work ✓</span>';
+      alarm=fromMin(ws-needBefore-20);
+      note=`Train <b>before</b> the shift. Wake <b>${alarm}</b> → ${esc(sessName)} → shower → clock in by ${a.workStart}.`;
+    } else {
+      // after work
+      const afterStart=fromMin(we+30);
+      slot='<span class="slotpill slot-blocked">Shift blocks AM</span> <span class="slotpill slot-after">After work ✓</span>';
+      alarm=a.wakeBy;
+      const bed=fromMin(toMin(a.wakeBy)-(6*90+15));
+      note=`Not enough room before your shift, so <b>train after</b>: start ~<b>${afterStart}</b> once you're back. Keep alarm at <b>${a.wakeBy}</b>. To still get 7–9h, aim to be in bed by <b>${bed}</b> tonight.`;
+      if(isCardio) note+=` Tip: a Z2 run after a shift still counts — keep HR 139–154, don't chase pace when tired.`;
+    }
+  }
+  html=`<div class="briefing"><div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Tomorrow's plan</div>
+    <div class="big">⏰ ${alarm}</div>
+    <div style="margin:6px 0">${slot}</div>
+    <div>${note}</div>
+    <div style="margin-top:8px;font-size:12px;color:var(--muted)">Session: <b style="color:var(--cyan)">${esc(sessName)}</b> ${nw?zoneBadge(nw.zone):''}</div></div>`;
+  document.getElementById('briefingOut').innerHTML=html;
+}
+
+//================= AGENDA =================
+function viewCal(){
+  const ev=S.events.slice().filter(e=>e.d>=today()).sort((x,y)=>(x.d+(x.t||'')).localeCompare(y.d+(y.t||'')));
+  const rows=ev.length?ev.slice(0,60).map(e=>{
+    const dd=new Date(e.d).toLocaleDateString([],{day:'numeric',month:'short'});
+    return `<div class="evrow"><span class="evdate">${dd}</span><span class="evtag ev-${e.c}">${e.c}</span><span style="flex:1;font-size:13px">${esc(e.s)}</span><span class="mono" style="font-size:11px;color:var(--faint)">${e.t||''}</span></div>`;
+  }).join(''):`<div class="empty">No upcoming events. Import your calendar below.</div>`;
+  return `<div class="card"><h2>📅 Agenda <span class="n">${ev.length} upcoming</span></h2>${rows}</div>
+  <div class="card"><h2>🔄 Import Calendar <span class="n">.ics</span></h2>
+    <div class="info" style="margin:0 0 10px">Export from Google Calendar (Settings → Import/Export → download) and load the <b>.ics</b> here. Shifts, training and appointments get classified automatically and feed the alarm router.</div>
+    <button class="btn block" id="importBtn">📂 Choose .ics file</button>
+    <div class="hint">Live auto-sync (no manual export) is the backend step — this importer is the no-backend bridge until then.</div></div>`;
+}
+function classifyEvent(s){const l=(s||'').toLowerCase();if(/dienst|werken|sortie|sog|blusmiddel/.test(l))return'work';if(/training|tml|lions|hyrox|cage|spar/.test(l))return'train';if(/dr\.|tandarts|orthodont|afspraak|willems/.test(l))return'med';return'other';}
+function parseICS(text){
+  text=text.replace(/\r\n/g,'\n').replace(/\n[ \t]/g,'');
+  const evs=[...text.matchAll(/BEGIN:VEVENT([\s\S]*?)END:VEVENT/g)].map(m=>m[1]);
+  const out=[];
+  for(const e of evs){
+    if(/RRULE/.test(e))continue;
+    const sm=e.match(/\nSUMMARY[^:\n]*:(.*)/);const dm=e.match(/\nDTSTART[^:\n]*[:;].*?(\d{8})(T(\d{6}))?/);const em=e.match(/\nDTEND[^:\n]*[:;].*?(\d{8})(T(\d{6}))?/);
+    if(!dm)continue;
+    const d=`${dm[1].slice(0,4)}-${dm[1].slice(4,6)}-${dm[1].slice(6,8)}`;
+    const t=dm[3]?`${dm[3].slice(0,2)}:${dm[3].slice(2,4)}`:'';
+    const te=em&&em[3]?`${em[3].slice(0,2)}:${em[3].slice(2,4)}`:'';
+    const s=(sm?sm[1]:'').trim();
+    out.push({d,t,te,s,c:classifyEvent(s)});
+  }
+  return out;
+}
+
+//================= QUESTS =================
+function viewQuests(){
+  const doneCt=S.dailies.filter(d=>d.done).length;
+  return `<div class="card"><h2>⚔️ Daily Quests <span class="n">${doneCt}/${S.dailies.length}</span></h2>
+    ${S.dailies.map(questRow).join('')}
+    <div class="field"><input class="grow" id="dqTitle" placeholder="New daily…"><select id="dqTag"><option value="body">Body</option><option value="mind">Mind</option><option value="wealth">Wealth</option><option value="fight">Fight</option></select><input id="dqXp" type="number" value="20" style="width:64px"><button class="btn" id="dqAdd">Add</button></div></div>
+  <div class="card"><h2>🎯 Objectives <span class="n">long arcs</span></h2>${S.quests.map(mainQuest).join('')}
+    <div class="field"><input class="grow" id="mqTitle2" placeholder="New objective…"><input id="mqTarget2" type="number" value="10" style="width:74px"><button class="btn" id="mqAdd2">Add</button></div></div>`;
+}
+function questRow(d){return `<div class="q ${d.done?'done':''}" data-id="${d.id}"><div class="check" data-act="toggle">✓</div><div class="qbody" data-act="open"><div class="qt">${esc(d.title)}</div><div class="qmeta"><span class="xp-tag">+${d.xp} XP</span><span class="tagpill tag-${d.tag}">${d.tag}</span>${d.guide?'<span class="tagpill" style="color:var(--cyan);border-color:var(--cyan-dim)">▶ guided</span>':'<span style="color:var(--faint);font-size:10px">tap for info</span>'}</div></div><div class="del" data-act="del">×</div></div>`;}
+function mainQuest(q){const pct=Math.min(100,Math.round(q.cur/q.target*100));return `<div class="mq" data-id="${q.id}"><div class="row"><div class="qt">${esc(q.title)}</div><span class="tagpill tag-${q.tag||'fight'}">${q.tag||'fight'}</span></div><div class="mini"><i style="width:${pct}%"></i></div><div class="mqctrl"><div class="stepper"><div class="step" data-act="minus">−</div><span class="mono" style="min-width:54px;text-align:center">${q.cur}/${q.target}</span><div class="step" data-act="plus">+</div></div><span class="mono" style="color:var(--cyan);font-size:12px">${pct}%</span><div class="del" data-act="del" style="margin-left:auto">×</div></div></div>`;}
+
+//================= STATS =================
+function viewStats(){
+  const cards=S.metrics.map(m=>{
+    const log=m.log,last=log.length?log[log.length-1].v:null;let trend='flat',txt='baseline';
+    if(log.length>=2){const diff=last-log[log.length-2].v;const imp=m.lowerBetter?diff<0:diff>0;trend=diff===0?'flat':(imp?'good':'bad');txt=`${diff<0?'▼':(diff>0?'▲':'→')} ${Math.abs(Math.round(diff*100)/100)} ${m.unit}`;}
+    return `<div class="metric" data-id="${m.id}"><div class="top"><span class="name">${esc(m.name)}</span><span class="trend ${trend}">${log.length>=2?txt:'baseline'}</span><span class="cur">${last!==null?last:'—'} <span class="unit">${m.unit}</span></span></div>${m.goal?`<div class="goalnote">🎯 ${esc(m.goal)}</div>`:''}${spark(log)}<div class="field" style="margin-top:11px"><input type="number" step="0.01" class="grow logVal" placeholder="Log ${esc(m.name)} (${m.unit})"><button class="btn sm logBtn">Record</button></div></div>`;
+  }).join('');
+  return `<div class="card"><h2>📈 Tracked Stats <span class="n">your real numbers</span></h2>${cards}
+    <div class="field" style="margin-top:6px"><input class="grow" id="mName" placeholder="New metric…"><input id="mUnit" placeholder="unit" style="width:74px"><select id="mDir"><option value="0">↑ higher better</option><option value="1">↓ lower better</option></select><button class="btn" id="mAdd">Track</button></div>
+    <div class="hint">Seeded from your tests: VO2max 54, weight 80.7→79.6kg. Time-trial &amp; strength workouts auto-feed these.</div></div>`;
+}
+function spark(log){
+  if(log.length<2)return `<div style="color:var(--faint);font-size:11px;margin-top:8px">Log twice to see your trend line.</div>`;
+  const vals=log.map(p=>p.v),W=320,H=54,pad=4,min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)||1;
+  const pts=vals.map((v,i)=>[pad+(i/(vals.length-1))*(W-2*pad),pad+(1-(v-min)/rng)*(H-2*pad)]);
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=d+` L${pts[pts.length-1][0].toFixed(1)} ${H-pad} L${pad} ${H-pad} Z`,lst=pts[pts.length-1];
+  return `<div style="margin-top:10px"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46d6c8" stop-opacity=".28"/><stop offset="1" stop-color="#46d6c8" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#g)"/><path d="${d}" fill="none" stroke="#46d6c8" stroke-width="2" stroke-linejoin="round"/><circle cx="${lst[0].toFixed(1)}" cy="${lst[1].toFixed(1)}" r="3.4" fill="#f5c451"/></svg></div>`;
+}
+
+//================= TREASURY =================
+function viewGold(){
+  const rows=S.ledger.slice().reverse().slice(0,40).map(t=>`<div class="row"><div class="d">${esc(t.desc)}<div class="dt">${t.day}</div></div><div class="amt ${t.amt>=0?'pos':'neg'}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</div></div>`).join('')||`<div class="empty">No transactions logged.</div>`;
+  return `<div class="card"><h2>💰 Treasury <span class="n">${S.ledger.length} entries</span></h2><div class="balance"><div class="v ${S.balance>=0?'pos':'neg'}">€${fmt(S.balance)}</div><div class="l">Current balance</div></div><div class="field"><input class="grow" id="txDesc" placeholder="What was it?"><input id="txAmt" type="number" step="0.01" placeholder="0.00" style="width:100px"><button class="btn ghost sm" id="txIn">+ In</button><button class="btn sm danger" id="txOut">− Out</button></div><div class="ledger" style="margin-top:12px">${rows}</div></div>`;
+}
+
+//================= MIND =================
+function viewMind(){
+  const m=S.mind; const due=dueConcepts().length;
+  const tracks=SUBJECTS.map(s=>{
+    const xp=m.subj[s.key]||0; const L=mindLevel(xp);
+    const learned=Object.keys(m.srs).filter(id=>{const c=conceptById(id);return c&&c.subject===s.key;}).length;
+    const total=CONCEPTS.filter(c=>c.subject===s.key).length;
+    return `<div class="mtrack"><div class="trow"><span class="tic">${s.icon}</span><span class="tname">${s.name}</span><span class="tlvl">Lv ${L.lvl}</span></div><div class="tbar"><i style="width:${L.pct}%"></i></div><div class="tmeta">${L.into}/${L.per} MP → Lv ${L.lvl+1} · ${learned}/${total} concepts learned</div></div>`;
+  }).join('');
+  const pick=mindPick();
+  let coachHtml='';
+  if(pick.type==='learn') coachHtml=`<div class="mlbl2">🧭 Coach — ${esc(pick.reason)}</div><div class="cname">${esc(pick.concept.title)}</div><div class="csub">${esc(subjName(pick.concept.subject))} · new concept</div><button class="btn block" id="mLearn">📖 Learn this, then test</button>`;
+  else if(pick.type==='review') coachHtml=`<div class="mlbl2">🧭 Coach — ${esc(pick.reason)}</div><div class="cname">${esc(pick.concept.title)}</div><div class="csub">${esc(subjName(pick.concept.subject))} · review due</div><button class="btn block" id="mReview">🔁 Review test, lock it in</button>`;
+  else coachHtml=`<div class="mlbl2">🧭 Coach — ${esc(pick.reason)}</div><button class="btn block" id="mReflect">💭 Reflect on something</button>`;
+  const entries=S.journal.slice().reverse().slice(0,8).map(j=>`<div class="entry"><div class="dt">${j.when}</div><div class="tx">${esc(j.text)}</div></div>`).join('')||`<div class="empty">No reflections yet.</div>`;
+  const books=allBooks();
+  const libHtml=books.map(b=>{const pages=bookPages(b).length;const pr=readingProg(b.id);const pct=Math.round((pr.furthest+1)/pages*100);const sub=SUBJECTS.find(s=>s.key===b.subject);const status=pr.finished?'<span style="color:var(--green)">✓ finished</span>':`p.${pr.mark+1}/${pages}`;return `<div class="bookrow${pr.finished?' bdone':''}" data-bid="${b.id}"><div class="brtop"><span class="brt">${esc(b.title)}</span><span class="brs">${sub?sub.icon:''} ${status}</span></div><div class="brbar"><i style="width:${pct}%"></i></div></div>`;}).join('');
+  return `
+  <div class="card"><h2>🧠 Mind <span class="n">${m.mp} MP · ${due} due</span></h2>${tracks}
+    <div class="hint">Each track levels up as you earn Mind Points. Concepts you pass come back for spaced review — that's what makes knowledge stick.</div></div>
+  <div class="card" style="border-color:#473e7a"><h2 style="color:var(--violet)">🧭 Mind Coach <span class="n">study this now</span></h2>${coachHtml}
+    <div class="field" style="margin-top:10px"><button class="btn ghost sm" id="mBrowse">Browse all concepts</button><button class="btn ghost sm" id="mReflect2">💭 Reflect</button></div></div>
+  <div class="card"><h2>📚 Library <span class="n">${books.length} books</span></h2>${libHtml}
+    <div class="field" style="margin-top:6px"><button class="btn ghost sm" id="addBook">+ Add book</button></div>
+    <div class="hint">Bookmarks save automatically — hit your page goal across as many sessions as you like to bank MP. Want a study in plain language? Ask me in chat and I'll write a reader edition for your library.</div></div>
+  <div class="card"><h2>💭 Reflections <span class="n">${S.journal.length}</span></h2>
+    <div class="prompt-chip" id="promptChip">💭 ${esc(currentPrompt())} — tap to use</div>
+    <textarea id="jText" placeholder="Think out loud…"></textarea>
+    <div class="field" style="justify-content:flex-end;margin-top:8px"><button class="btn" id="jSave">Save reflection · +10 MP</button></div>
+    <div style="margin-top:14px">${entries}</div></div>`;
+}
+
+//================= BINDINGS =================
+const bind={
+  camp(){
+    document.querySelectorAll('#view .mq').forEach(el=>{
+      const q=S.quests.find(x=>x.id===el.dataset.id);if(!q)return;
+      el.querySelector('[data-act=plus]').onclick=()=>{if(q.cur<q.target){q.cur++;awardXp(20);toast('+20 XP · objective progress');if(q.cur>=q.target)toast('🏆 Objective conquered!');save();renderHud();renderView();}};
+      el.querySelector('[data-act=minus]').onclick=()=>{if(q.cur>0){q.cur--;save();renderView();}};
+      el.querySelector('[data-act=del]').onclick=()=>{S.quests=S.quests.filter(x=>x.id!==q.id);save();renderView();};
+    });
+    add('mqAdd',()=>{const t=val('mqTitle');if(!t)return;S.quests.push({id:id(),title:t,cur:0,target:Math.max(1,+val('mqTarget')||10),tag:'fight'});save();renderView();});
+  },
+  train(){
+    if(S.session){
+      document.querySelectorAll('#view .exrow').forEach(el=>{const e=S.session.exercises.find(x=>x.id===el.dataset.eid);el.querySelector('[data-act=exdone]').onclick=()=>{e.done=!e.done;save();renderView();};const inp=el.querySelector('.exVal');if(inp)inp.onchange=()=>{e.val=inp.value;save();};});
+      const note=document.getElementById('sesNote');note.onchange=()=>{S.session.note=note.value;save();};
+      document.getElementById('finishBtn').onclick=finishSession;
+      document.getElementById('abandonBtn').onclick=()=>{S.session=null;save();renderView();};
+      return;
+    }
+    const p=activeProgram();
+    const b=document.getElementById('beginBtn');if(b)b.onclick=openSessionModal;
+    const cb=document.getElementById('coachBtn');if(cb)cb.onclick=()=>{const r=coachPick();if(r.workout)openSessionModal(r.workout.id,r.reason);};
+    const sk=document.getElementById('skipBtn');if(sk)sk.onclick=()=>{p.queuePos++;save();renderView();toast('Skipped → next');};
+    const sh=document.getElementById('shuffleBtn');if(sh)sh.onclick=()=>{p.order=shuffle(p.order);p.queuePos=0;save();renderView();};
+    document.querySelectorAll('#view .progblock').forEach(pb=>{
+      const prog=S.programs.find(x=>x.id===pb.dataset.pid);
+      pb.querySelector('[data-act=toggle]').onclick=()=>{prog._open=!prog._open;renderView();};
+      if(prog._open){const act=pb.querySelector('[data-act=activate]');if(act)act.onclick=()=>{S.programs.forEach(x=>x.active=false);prog.active=true;prog.queuePos=0;save();renderView();toast(prog.name+' active');};}
+    });
+  },
+  alarm(){
+    const aw=document.getElementById('aWake'),ws=document.getElementById('aWStart'),we=document.getElementById('aWEnd');
+    aw.onchange=()=>{S.alarm.wakeBy=aw.value;save();renderView();};
+    ws.onchange=()=>{S.alarm.workStart=ws.value;save();};
+    we.onchange=()=>{S.alarm.workEnd=we.value;save();};
+    add('briefBtn',generateBriefing);
+  },
+  cal(){
+    add('importBtn',()=>document.getElementById('icsInput').click());
+  },
+  quests(){
+    document.querySelectorAll('#view .q[data-id]').forEach(el=>{const item=S.dailies.find(d=>d.id===el.dataset.id);if(!item)return;
+      el.querySelector('[data-act=toggle]').onclick=()=>{item.done=!item.done;if(item.done){awardXp(item.xp);bumpCount(item.tag);toast(`+${item.xp} XP · ${item.title}`);}else{S.totalXp=Math.max(0,S.totalXp-item.xp);bumpCount(item.tag,-1);}save();renderHud();renderView();};
+      const ob=el.querySelector('[data-act=open]');if(ob)ob.onclick=()=>openQuestModal(item.id);
+      el.querySelector('[data-act=del]').onclick=()=>{S.dailies=S.dailies.filter(d=>d.id!==item.id);save();renderView();};});
+    document.querySelectorAll('#view .mq').forEach(el=>{const q=S.quests.find(x=>x.id===el.dataset.id);
+      el.querySelector('[data-act=plus]').onclick=()=>{if(q.cur<q.target){q.cur++;awardXp(20);toast('+20 XP');if(q.cur>=q.target)toast('🏆 Conquered!');save();renderHud();renderView();}};
+      el.querySelector('[data-act=minus]').onclick=()=>{if(q.cur>0){q.cur--;save();renderView();}};
+      el.querySelector('[data-act=del]').onclick=()=>{S.quests=S.quests.filter(x=>x.id!==q.id);save();renderView();};});
+    add('dqAdd',()=>{const t=val('dqTitle');if(!t)return;S.dailies.push({id:id(),title:t,xp:+val('dqXp')||20,tag:val('dqTag'),done:false,day:today()});save();renderView();});
+    add('mqAdd2',()=>{const t=val('mqTitle2');if(!t)return;S.quests.push({id:id(),title:t,cur:0,target:Math.max(1,+val('mqTarget2')||10),tag:'fight'});save();renderView();});
+  },
+  stats(){
+    document.querySelectorAll('#view .metric').forEach(el=>{const m=S.metrics.find(x=>x.id===el.dataset.id);
+      el.querySelector('.logBtn').onclick=()=>{const v=parseFloat(el.querySelector('.logVal').value);if(isNaN(v))return;m.log.push({day:today(),v});awardXp(10);toast('+10 XP · logged');save();renderHud();renderView();};});
+    add('mAdd',()=>{const n=val('mName');if(!n)return;S.metrics.push({id:id(),name:n,unit:val('mUnit')||'',lowerBetter:val('mDir')==='1',goal:'',log:[]});save();renderView();});
+  },
+  gold(){const post=s=>{const d=val('txDesc'),a=parseFloat(document.getElementById('txAmt').value);if(!d||isNaN(a))return;const amt=s*Math.abs(a);S.ledger.push({day:today(),desc:d,amt});S.balance=Math.round((S.balance+amt)*100)/100;save();renderHud();renderView();};add('txIn',()=>post(1));add('txOut',()=>post(-1));},
+  mind(){
+    add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
+    add('mReview',()=>{const p=mindPick();if(p.concept)startTest(p.concept.id,true);});
+    add('mReflect',openReflect); add('mReflect2',openReflect); add('mBrowse',openBrowse);
+    document.querySelectorAll('#view .bookrow').forEach(el=>el.onclick=()=>openReader(el.dataset.bid));
+    add('addBook',openAddBook);
+    const ta=document.getElementById('jText'); const pc=document.getElementById('promptChip');
+    if(pc&&ta)pc.onclick=()=>{ta.value=pc.textContent.replace('💭 ','').replace(' — tap to use','')+"\n\n";ta.focus();};
+    add('jSave',()=>{const t=ta.value.trim();if(!t)return;S.journal.push({when:new Date().toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),text:t});S.mind.mp+=10;toast('+10 MP · reflection saved');save();renderView();});
+  }
+};
+
+// ---- Coach's Pick: reasoned session selection (not random) ----
+function sessionCat(w){ if(w.zone==='z2')return'aerobic'; if(w.zone==='rec')return'recovery'; if(w.zone==='tempo'||w.zone==='max')return'intensity'; return'strength'; }
+function recentSessions(days){const cut=Date.now()-days*864e5;return S.sessions.filter(s=>new Date(s.day).getTime()>=cut);}
+function coachPick(){
+  const p=activeProgram();
+  const allW=S.programs.flatMap(pr=>pr.workouts);
+  const rec7=recentSessions(7);
+  const last=S.sessions[S.sessions.length-1];
+  const lastName=last?last.name:null;
+  let lastCat=null; if(last){const lw=allW.find(w=>w.name===last.name); if(lw)lastCat=sessionCat(lw);}
+  const counts={aerobic:0,intensity:0,strength:0,recovery:0};
+  rec7.forEach(s=>{const lw=allW.find(w=>w.name===s.name); if(lw)counts[sessionCat(lw)]++;});
+  let consec=0; for(let i=0;i<6;i++){const d=new Date(Date.now()-i*864e5).toISOString().slice(0,10); if(S.sessions.some(s=>s.day===d))consec++; else break;}
+  let best=null,bestScore=-1e9,reason='';
+  for(const w of p.workouts){
+    const c=sessionCat(w); let score=10,why=[];
+    if(w.name===lastName) score-=45;
+    if(c==='aerobic'){ if(counts.aerobic<2){score+=30;why.push("your Z2 base is the missing link and you're under 2× this week");} else score+=4; }
+    if(c==='intensity'){ if(lastCat==='intensity')score-=38; else if(counts.intensity>=2)score-=14; else {score+=18;why.push("you've banked enough base — time to attack the acidosis");} }
+    if(c==='strength'){ if(counts.strength<1){score+=20;why.push("pulling strength and core are due this week");} else score+=5; }
+    if(c==='recovery'){ if(consec>=3){score+=42;why.push("you've trained several days straight — recovery protects your explosiveness");} else score-=12; }
+    if(lastCat==='intensity'&&(c==='aerobic'||c==='recovery'||c==='strength'))score+=14;
+    score+=Math.random()*5;
+    if(score>bestScore){bestScore=score;best=w;reason=why[0]||"it fits where you are in the phase";}
+  }
+  return {workout:best,reason};
+}
+
+function openSessionModal(wid,reason){
+  const p=activeProgram();
+  const nw=wid?workoutById(p,wid):nextWorkout(p);
+  if(!nw)return;
+  const mb=document.getElementById('modalBody');
+  mb.innerHTML=`<div class="grab"></div>
+    <div class="mlbl">Session briefing · ${esc(p.name)}</div>
+    <div class="mname">${esc(nw.name)} ${zoneBadge(nw.zone)}</div>
+    ${reason?`<div style="font-size:12.5px;color:var(--cyan);margin:2px 0 4px;line-height:1.5">🧭 Coach's pick — ${esc(reason)}.</div>`:''}
+    <div class="reward-box"><div class="rl">🎁 Reward — what this forges</div><div class="rt">${esc(nw.reward||'')}</div></div>
+    <div class="mexs">The session · +${nw.xp} XP</div>
+    ${nw.exercises.map(e=>`<div class="exrow" style="cursor:default"><div class="qbody"><div class="nm">${esc(e.name)}</div><div class="sc">${esc(e.scheme)}</div></div>${e.link?`<span class="zonebadge zone-z2">↳ ${esc(metricName(e.link))}</span>`:''}</div>`).join('')}
+    <div class="field" style="margin-top:14px"><button class="btn block" id="modalStart">▶ Start now · +${nw.xp} XP</button></div>
+    <div class="field"><button class="btn ghost sm" id="modalClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('modalStart').onclick=()=>{closeModal();beginSession(nw.id);};
+  document.getElementById('modalClose').onclick=closeModal;
+}
+function closeModal(){document.getElementById('modalBack').classList.remove('show');}
+function beginSession(wid){const p=activeProgram();const nw=wid?workoutById(p,wid):nextWorkout(p);if(!nw)return;S.session={programId:p.id,workoutId:nw.id,name:nw.name,xp:nw.xp,zone:nw.zone,note:'',exercises:nw.exercises.map(e=>({id:e.id,name:e.name,scheme:e.scheme,unit:e.unit,link:e.link,val:'',done:false}))};save();renderView();}
+function finishSession(){
+  const s=S.session,p=S.programs.find(x=>x.id===s.programId);
+  s.exercises.forEach(e=>{if(e.link&&e.val!==''&&!isNaN(parseFloat(e.val))){const m=S.metrics.find(x=>x.id===e.link);if(m)m.log.push({day:today(),v:parseFloat(e.val)});}});
+  S.sessions.push({id:id(),day:today(),name:s.name,count:s.exercises.filter(e=>e.done||e.val!=='').length,note:s.note});
+  awardXp(s.xp);bumpCount('fight');
+  if(p)p.queuePos++;
+  // phase progression
+  S.phaseSessions++;
+  const ph=PHASES[S.phaseIdx];
+  if(S.phaseSessions>=ph.sessionsToClear && S.phaseIdx<PHASES.length-1){
+    S.phaseIdx++;S.phaseSessions=0;
+    // activate next phase program
+    S.programs.forEach(x=>x.active=false);
+    const next=S.programs.find(x=>x.phase===PHASES[S.phaseIdx].key);if(next){next.active=true;next.queuePos=0;}
+    setTimeout(()=>toast(`🎖️ PHASE CLEARED → ${PHASES[S.phaseIdx].name} unlocked!`),900);
+  }
+  S.session=null;save();renderHud();active='train';renderTabs();renderView();
+  toast(`✓ ${s.name} · +${s.xp} XP`);
+}
+
+//================= HELPERS =================
+function add(i,fn){const b=document.getElementById(i);if(b)b.onclick=fn;}
+function val(i){const e=document.getElementById(i);return e?e.value.trim():'';}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2000);}
+function renderAll(){renderHud();renderTabs();renderView();}
+setInterval(()=>{if(booted)renderHud();},30000);
+
+// ICS file import
+document.getElementById('icsInput').addEventListener('change',ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const parsed=parseICS(r.result);const fut=parsed.filter(e=>e.d>=today());
+    // merge unique by d+t+s
+    const seen=new Set(S.events.map(e=>e.d+e.t+e.s));
+    let added=0;fut.forEach(e=>{const k=e.d+e.t+e.s;if(!seen.has(k)){S.events.push(e);seen.add(k);added++;}});
+    save();toast(`📅 Imported ${added} upcoming events`);renderView();
+  }catch(e){toast('Could not parse that .ics');}};
+  r.readAsText(f);ev.target.value='';
+});
+
+// close modal on backdrop tap
+document.getElementById('modalBack').addEventListener('click',e=>{if(e.target.id==='modalBack')closeModal();});
+
+//================= QUEST DETAIL MODAL =================
+function fmtDur(s){return s>=60?`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:`${s}s`;}
+function openQuestModal(qid){
+  const d=S.dailies.find(x=>x.id===qid);if(!d)return;
+  const mb=document.getElementById('modalBody');
+  const hasGuide=d.guide&&d.guide.length;
+  const totalMin=hasGuide?Math.round(d.guide.reduce((a,s)=>a+s.dur,0)/60*10)/10:0;
+  mb.innerHTML=`<div class="grab"></div>
+    <div class="mlbl">Daily quest${d.done?' · ✓ done today':''}</div>
+    <div class="mname">${esc(d.title)}</div>
+    ${d.desc?`<div class="reward-box"><div class="rl">ℹ what this is</div><div class="rt">${esc(d.desc)}</div></div>`:''}
+    ${hasGuide?`<div class="mexs">${d.guide.length} moves · ~${totalMin} min — follow along</div>
+      ${d.guide.map(s=>`<div class="exrow" style="cursor:default"><div class="qbody"><div class="nm">${esc(s.name)}</div><div class="sc">${esc(s.instr)}</div></div><span class="zonebadge zone-z2">${fmtDur(s.dur)}</span></div>`).join('')}
+      <div class="field" style="margin-top:14px"><button class="btn block" id="qStart">▶ Start guided quest · +${d.xp} XP</button></div>`
+    :`<div class="field" style="margin-top:14px"><button class="btn block" id="qDone">${d.done?'↩ Mark not done':'✓ Mark complete · +'+d.xp+' XP'}</button></div>`}
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  const qs=document.getElementById('qStart');
+  if(qs)qs.onclick=()=>{closeModal();startGuide(d.guide,()=>completeQuest(d.id));};
+  const qd=document.getElementById('qDone');
+  if(qd)qd.onclick=()=>{closeModal();if(!d.done){completeQuest(d.id);}else{d.done=false;S.totalXp=Math.max(0,S.totalXp-d.xp);bumpCount(d.tag,-1);save();renderHud();renderView();}};
+}
+function completeQuest(qid){
+  const d=S.dailies.find(x=>x.id===qid);if(!d||d.done)return;
+  d.done=true;awardXp(d.xp);bumpCount(d.tag);save();renderHud();
+  if(active==='quests')renderView();
+  toast(`+${d.xp} XP · ${d.title}`);
+}
+
+//================= GUIDED PLAYER (timer + animated demo) =================
+function figureSVG(anim){
+  return `<svg class="figure anim-${anim}" viewBox="0 0 120 160">
+    <g class="fig">
+      <circle class="head" cx="60" cy="24" r="12"/>
+      <line class="torso" x1="60" y1="36" x2="60" y2="96"/>
+      <g class="arms"><line x1="60" y1="50" x2="33" y2="72"/><line x1="60" y1="50" x2="87" y2="72"/></g>
+      <g class="legs"><line x1="60" y1="96" x2="43" y2="142"/><line x1="60" y1="96" x2="77" y2="142"/></g>
+    </g></svg>`;
+}
+const RING_CIRC=2*Math.PI*58;
+let player={steps:[],idx:0,remaining:0,timer:null,paused:false,onDone:null};
+function startGuide(steps,onDone){
+  player={steps:steps.slice(),idx:0,remaining:0,timer:null,paused:false,onDone};
+  document.getElementById('ringFg').style.strokeDasharray=RING_CIRC;
+  document.getElementById('player').classList.add('show');
+  document.getElementById('pPause').textContent='Pause';
+  loadStep();
+  document.getElementById('pPause').onclick=togglePause;
+  document.getElementById('pSkip').onclick=()=>nextStep();
+  document.getElementById('pQuit').onclick=quitGuide;
+}
+function loadStep(){
+  const s=player.steps[player.idx];
+  player.remaining=s.dur;
+  document.getElementById('pStep').textContent=`Step ${player.idx+1} / ${player.steps.length}`;
+  document.getElementById('pProgress').innerHTML=player.steps.map((_,i)=>`<i class="${i<player.idx?'cleared':(i===player.idx?'on':'')}"></i>`).join('');
+  document.getElementById('figStage').innerHTML=figureSVG(s.anim||'breathe');
+  document.getElementById('pMove').textContent=s.name;
+  document.getElementById('pInstr').textContent=s.instr;
+  const nx=player.steps[player.idx+1];
+  document.getElementById('pNext').textContent=nx?`Next: ${nx.name}`:'Last move — finish strong';
+  updateTimerUI(true);
+  clearInterval(player.timer);
+  player.timer=setInterval(()=>{
+    if(player.paused)return;
+    player.remaining--;
+    updateTimerUI();
+    if(player.remaining<=0)nextStep();
+  },1000);
+}
+function updateTimerUI(reset){
+  const s=player.steps[player.idx];
+  document.getElementById('pCount').textContent=fmtDur(Math.max(0,player.remaining));
+  const frac=Math.max(0,player.remaining)/s.dur;
+  const fg=document.getElementById('ringFg');
+  if(reset)fg.style.transition='none';else fg.style.transition='stroke-dashoffset 1s linear';
+  fg.style.strokeDashoffset=RING_CIRC*(1-frac);
+  if(reset)requestAnimationFrame(()=>{fg.style.transition='stroke-dashoffset 1s linear';});
+}
+function togglePause(){player.paused=!player.paused;document.getElementById('pPause').textContent=player.paused?'Resume':'Pause';}
+function nextStep(){player.idx++;if(player.idx>=player.steps.length){finishGuide();}else{loadStep();}}
+function finishGuide(){
+  clearInterval(player.timer);
+  const ov=document.getElementById('player');
+  const cb=player.onDone;
+  ov.classList.remove('show');
+  if(cb)cb();
+  toast('✓ Quest complete — nice work');
+}
+function quitGuide(){clearInterval(player.timer);document.getElementById('player').classList.remove('show');}
+
+//================= MIND ENGINE (content + spaced repetition) =================
+const SUBJECTS=[{key:'tech',name:'Science & Tech',icon:'🔬'},{key:'psych',name:'Psychology',icon:'🧠'}];
+function subjName(k){const s=SUBJECTS.find(x=>x.key===k);return s?s.name:'Open';}
+const CONCEPTS=[
+ {id:'thermo1',subject:'tech',title:'First Law of Thermodynamics',
+  lesson:`Energy can't be created or destroyed — only converted from one form to another. For any system, the change in internal energy equals the heat added minus the work done by the system (ΔU = Q − W). "Free energy" devices are impossible: every engine, battery, or body just shuffles energy between forms, never makes more. When you sprint, chemical energy becomes mechanical work plus a lot of heat — and the books always balance.`,
+  quiz:[
+   {q:"A machine claims to output more mechanical energy than the electrical energy you feed it, with no other input. What can you conclude?",options:["It violates the first law and can't work as claimed","It's just very efficient","It must be harnessing entropy","It stores extra energy as work"],answer:0,explain:"Net energy out can never exceed energy in. A closed 'over-unity' device breaks conservation of energy."},
+   {q:"Your body burns ~600 kcal on a run but only does ~120 kcal of mechanical work. Where did the rest go?",options:["Mostly left as heat","It was destroyed","Stored as work","Converted directly into entropy"],answer:0,explain:"Humans are only ~20-25% efficient; the balance leaves as heat — exactly what ΔU bookkeeping predicts."}]},
+ {id:'entropy',subject:'tech',title:'Entropy & the Second Law',
+  lesson:`Energy spontaneously spreads out: the entropy (disorder) of an isolated system never decreases. That's why heat flows hot→cold on its own and never the reverse, and why no engine can be 100% efficient — some energy always disperses as low-grade waste heat. Local order can still appear (a fridge, a growing body, training adaptations), but only by exporting even more disorder to the surroundings.`,
+  quiz:[
+   {q:"Why can't even a perfectly built engine convert all its heat into work?",options:["Some energy must disperse as waste heat","Friction can always be eliminated","It can, with superconductors","The first law forbids it"],answer:0,explain:"The second law caps efficiency below 100% no matter how good the engineering."},
+   {q:"A living body grows more ordered as it adapts. Does that break the second law?",options:["No — it exports more disorder to its surroundings","Yes, biology is an exception","Only for plants","Entropy doesn't apply to living things"],answer:0,explain:"Local order is 'paid for' by greater total entropy released as heat and waste."}]},
+ {id:'gradient',subject:'tech',title:'How models learn: gradient descent',
+  lesson:`A model has knobs (parameters) and a loss function that measures how wrong it is. Gradient descent nudges every knob a little in the direction that reduces loss, then repeats thousands of times — like walking downhill in fog by always stepping where the slope drops fastest. The 'learning rate' sets step size: too big and you overshoot the valley, too small and training crawls.`,
+  quiz:[
+   {q:"Training loss explodes toward infinity after a few steps. Most likely cause?",options:["Learning rate too high — steps overshoot","Learning rate too low","Too little data","Model too small"],answer:0,explain:"Oversized steps bounce out of the valley instead of settling. Lower the learning rate."},
+   {q:"What does the gradient actually tell you?",options:["The direction that most increases loss — so we step opposite","The final answer","How much data to use","The model's confidence"],answer:0,explain:"We descend against the gradient to reduce loss."}]},
+ {id:'overfit',subject:'tech',title:'Overfitting vs generalization',
+  lesson:`A model that memorizes its training data can score perfectly there yet fail on new data — it learned noise instead of the real pattern. Generalization, performing well on data it has never seen, is the actual goal. You spot overfitting when training accuracy keeps climbing while validation accuracy stalls or drops. Fixes: more diverse data, simpler models, regularization, early stopping.`,
+  quiz:[
+   {q:"Training accuracy 99%, validation 70% and falling. Diagnosis?",options:["Overfitting — it memorized the training set","Underfitting","A perfect model","Needs a higher learning rate"],answer:0,explain:"The widening gap between training and validation is the signature of overfitting."},
+   {q:"Which most directly fights overfitting?",options:["Adding more diverse training data","Training for longer","Raising the learning rate","Deleting the validation set"],answer:0,explain:"More representative data makes memorizing harder and the true pattern clearer."}]},
+ {id:'feedback',subject:'tech',title:'Feedback loops',
+  lesson:`A feedback loop feeds a system's output back into its input. Negative feedback corrects toward a target — a thermostat cuts the heat as the room warms — creating stability. Positive feedback amplifies — a mic near its speaker squeals louder and louder — creating runaway. The most robust systems, from body temperature to engineering controllers, lean on negative feedback to self-regulate.`,
+  quiz:[
+   {q:"Your body sweats to cool down when overheating. What kind of loop is that?",options:["Negative feedback — it opposes the change","Positive feedback","Open loop","No feedback"],answer:0,explain:"It counteracts the rise back toward a setpoint, which is negative feedback."},
+   {q:"Which is a positive-feedback (runaway) example?",options:["Mic-speaker squeal getting louder","A thermostat holding room temperature","Cruise control holding speed","Sweating when hot"],answer:0,explain:"Output amplifies the input and escalates — classic positive feedback."}]},
+ {id:'dissonance',subject:'psych',title:'Cognitive dissonance',
+  lesson:`Holding two clashing beliefs — or acting against your own beliefs — creates mental discomfort, and the mind rushes to resolve it, usually by editing the belief rather than the behavior. People who endure a brutal initiation end up valuing the group more ("it must be worth it"). This is why we rationalize: it's easier to rewrite the story than to admit the effort or the choice was wrong.`,
+  quiz:[
+   {q:"Someone trains brutally hard at a gym they secretly find mediocre. Dissonance theory predicts they'll most likely…",options:["Convince themselves the gym is great","Quit immediately","Feel nothing","Blame the coach"],answer:0,explain:"Effort justification reduces dissonance by inflating the target's value."},
+   {q:"The core driver of resolving dissonance is…",options:["Reducing psychological discomfort","Seeking the truth","Pleasing other people","Saving money"],answer:0,explain:"It's discomfort-reduction, not accuracy, that motivates the shift."}]},
+ {id:'operant',subject:'psych',title:'Operant conditioning',
+  lesson:`Behavior is shaped by its consequences. Reinforcement (adding a reward, or removing something unpleasant) increases a behavior; punishment decreases it. The stickiest schedule of all is variable-ratio — unpredictable rewards, like slot machines or social-media notifications — which produces the highest, most persistent response rates and is exactly why those things are so hard to put down.`,
+  quiz:[
+   {q:"Why are unpredictable (variable-ratio) rewards so habit-forming?",options:["The uncertainty keeps the behavior firing in hope of the next hit","They're simply bigger rewards","They punish you","They're perfectly predictable"],answer:0,explain:"Variable-ratio schedules are the most resistant to extinction — the slot-machine effect."},
+   {q:"Switching off an annoying alarm by getting up is an example of…",options:["Negative reinforcement — it increases getting up","Punishment","Positive reinforcement","Extinction"],answer:0,explain:"Removing an aversive stimulus to increase a behavior is negative reinforcement."}]},
+ {id:'anchoring',subject:'psych',title:'Anchoring bias',
+  lesson:`The first number you see warps every judgment that follows. A high "original price" makes the sale price feel like a steal; naming a high salary first drags the whole negotiation upward. Anchors bias your estimates even when they're random and clearly irrelevant. The defense is simple but hard: form your own estimate before you see theirs, and ask where their anchor even came from.`,
+  quiz:[
+   {q:"A jacket marked '€400, now €180.' Why does €180 feel cheap?",options:["The €400 anchor reframes €180 as a deal","€180 is objectively cheap","Jackets really cost €400","Because you need a jacket"],answer:0,explain:"The reference anchor inflates the perceived value of the discount."},
+   {q:"Best defense against anchoring in a negotiation?",options:["Decide your own number before hearing theirs","Always counter with their number","Accept the first offer","Avoid negotiating at all"],answer:0,explain:"A pre-formed, independent estimate resists the pull of their anchor."}]},
+ {id:'dual',subject:'psych',title:'System 1 and System 2',
+  lesson:`Thinking runs on two systems. System 1 is fast, automatic and intuitive — superb for snap judgments, but prone to bias. System 2 is slow, effortful and deliberate — accurate, but lazy and easily tired. Most errors happen when System 1 quietly answers a hard question with an easy one and System 2 just rubber-stamps it. Knowing when to deliberately switch on System 2 is a core thinking skill.`,
+  quiz:[
+   {q:"A bat and ball cost €1.10; the bat costs €1 more than the ball. The ball costs…",options:["€0.05","€0.10","€1.00","€1.05"],answer:0,explain:"System 1 blurts €0.10. System 2 checks: €0.05 + €1.05 = €1.10. The intuitive answer is wrong."},
+   {q:"Most cognitive errors arise when…",options:["System 1 answers and System 2 fails to check","System 2 overthinks","Both systems are off","You're well-rested"],answer:0,explain:"The lazy hand-off from intuition to unchecked acceptance is what drives bias."}]},
+ {id:'spacing',subject:'psych',title:'The spacing effect',
+  lesson:`You remember far more by spreading study across days than by cramming the same minutes into one block. Each time you retrieve a memory just as it's starting to fade, you strengthen it — that "desirable difficulty" is what builds durable recall. Cramming feels more productive because it creates a false fluency in the moment, but spacing wins on every real test. It's exactly why this app reviews concepts on a schedule instead of all at once.`,
+  quiz:[
+   {q:"Why does spaced practice beat cramming for long-term recall?",options:["Retrieving as a memory fades strengthens it most","It's simply more enjoyable","It uses System 1","Cramming damages the brain"],answer:0,explain:"Effortful retrieval at spacing intervals consolidates memory durably."},
+   {q:"Cramming often feels more effective because…",options:["It creates a false sense of fluency in the moment","It actually is more effective","It uses spacing","It's harder than spacing"],answer:0,explain:"Immediate fluency misleads; lasting retention needs spaced retrieval."}]},
+];
+const REFLECTS=[
+ {subj:'tech',prompt:"If an AI could perfectly predict your next decision, would the decision still be yours?"},
+ {subj:'tech',prompt:"Why does time seem to run only one way — and what does entropy have to do with it?"},
+ {subj:'tech',prompt:"Could a bridge be built 'too strong'? What would that actually cost?"},
+ {subj:'psych',prompt:"Where in your week is a variable-ratio reward quietly running your behavior?"},
+ {subj:'psych',prompt:"Name a belief you might hold partly to avoid admitting past effort was wasted."},
+ {subj:'psych',prompt:"When did you last let System 1 answer a question that deserved System 2?"},
+ {subj:'tech',prompt:"What's a small daily edge that compounds invisibly over a whole year?"},
+];
+function conceptById(id){return CONCEPTS.find(c=>c.id===id);}
+function mindLevel(xp){const per=100;return{lvl:Math.floor(xp/per)+1,into:xp%per,per,pct:Math.round((xp%per)/per*100)};}
+const BOX_DAYS=[0,1,3,7,16,35];
+function dayNum(){return Math.floor(Date.now()/864e5);}
+function dueConcepts(){return Object.keys(S.mind.srs).filter(id=>conceptById(id)&&S.mind.srs[id].due<=dayNum());}
+function scheduleSRS(id,passed){const s=S.mind.srs[id]||{box:0,due:0};s.box=passed?Math.min(BOX_DAYS.length-1,s.box+1):1;s.due=dayNum()+BOX_DAYS[s.box];S.mind.srs[id]=s;}
+function mindPick(){
+  const due=dueConcepts(); if(due.length)return{type:'review',concept:conceptById(due[0]),reason:'a concept is due — lock it into long-term memory'};
+  const counts={}; SUBJECTS.forEach(s=>counts[s.key]=0); Object.keys(S.mind.srs).forEach(id=>{const c=conceptById(id);if(c)counts[c.subject]++;});
+  const order=SUBJECTS.slice().sort((a,b)=>counts[a.key]-counts[b.key]);
+  for(const s of order){const next=CONCEPTS.find(c=>c.subject===s.key&&!S.mind.srs[c.id]);if(next)return{type:'learn',concept:next,reason:'building your '+s.name+' track'};}
+  return {type:'reflect',reason:"you're ahead on lessons — time to think"};
+}
+function currentPrompt(){return REFLECTS[Math.floor(Math.random()*REFLECTS.length)].prompt;}
+
+let testState=null;
+function openLesson(id){
+  const c=conceptById(id);if(!c)return;
+  const mb=document.getElementById('modalBody');
+  mb.innerHTML=`<div class="grab"></div><div class="mlbl">${esc(subjName(c.subject))} · lesson</div><div class="mname">${esc(c.title)}</div>
+    <div class="lesson">${esc(c.lesson)}</div>
+    <div class="field" style="margin-top:14px"><button class="btn block" id="toTest">Start test →</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('toTest').onclick=()=>startTest(id,false);
+}
+function startTest(id,isReview){const c=conceptById(id);if(!c)return;testState={c,qi:0,score:0,isReview};document.getElementById('modalBack').classList.add('show');renderQuestion();}
+function renderQuestion(){
+  const {c,qi}=testState; const q=c.quiz[qi];
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · Q${qi+1}/${c.quiz.length}</div>
+    <div class="qtext">${esc(q.q)}</div><div id="opts">${q.options.map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join('')}</div><div id="qfb"></div>`;
+  document.querySelectorAll('#opts .opt').forEach(b=>b.onclick=()=>answerQ(parseInt(b.dataset.i)));
+}
+function answerQ(i){
+  const {c,qi}=testState; const q=c.quiz[qi]; const correct=i===q.answer;
+  if(correct)testState.score++;
+  document.querySelectorAll('#opts .opt').forEach((b,idx)=>{b.disabled=true;if(idx===q.answer)b.classList.add('right');else if(idx===i)b.classList.add('wrong');});
+  const last=qi>=c.quiz.length-1;
+  document.getElementById('qfb').innerHTML=`<div class="fb ${correct?'fbok':'fbno'}">${correct?'✓ Correct':'✗ Not quite'}</div><div class="fbex">${esc(q.explain)}</div><div class="field" style="margin-top:12px"><button class="btn block" id="qnext">${last?'See result':'Next question →'}</button></div>`;
+  document.getElementById('qnext').onclick=()=>{if(last)finishTest();else{testState.qi++;renderQuestion();}};
+}
+function finishTest(){
+  const {c,score,isReview}=testState; const total=c.quiz.length; const pass=score===total;
+  scheduleSRS(c.id,pass);
+  const mp=isReview?(pass?12:4):(pass?30:10);
+  S.mind.mp+=mp; S.mind.subj[c.subject]=(S.mind.subj[c.subject]||0)+mp;
+  awardXp(0); save();
+  const nextDue=S.mind.srs[c.id].due-dayNum();
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · result</div>
+    <div class="mname">${score}/${total} ${pass?'· mastered':'· keep at it'}</div>
+    <div class="reward-box"><div class="rl">+${mp} MP · ${esc(subjName(c.subject))}</div><div class="rt">${pass?`Locked in. Next review in ${nextDue} day${nextDue===1?'':'s'} — spacing is what makes it stick.`:'Review scheduled for tomorrow — a second pass will cement it.'}</div></div>
+    <div class="field" style="margin-top:8px"><button class="btn block" id="qClose">Done</button></div>`;
+  document.getElementById('qClose').onclick=()=>{closeModal();renderHud();renderView();};
+  testState=null;
+}
+function openReflect(){
+  const r=REFLECTS[Math.floor(Math.random()*REFLECTS.length)];
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(subjName(r.subj))} · reflect</div>
+    <div class="lesson" style="font-style:italic">${esc(r.prompt)}</div>
+    <textarea id="rText" placeholder="Your take — there's no wrong answer…" style="margin-top:10px"></textarea>
+    <div class="field" style="margin-top:10px"><button class="btn block" id="rSave">Save reflection · +15 MP</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('rSave').onclick=()=>{const t=document.getElementById('rText').value.trim();if(!t)return;S.journal.push({when:new Date().toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),text:'['+subjName(r.subj)+'] '+r.prompt+'\n\n'+t});S.mind.mp+=15;closeModal();save();renderHud();renderView();toast('+15 MP · reflection saved');};
+}
+function openBrowse(){
+  const list=SUBJECTS.map(s=>{
+    const cs=CONCEPTS.filter(c=>c.subject===s.key);
+    return `<div class="mexs" style="margin-top:12px">${s.icon} ${esc(s.name)}</div>`+cs.map(c=>{
+      const st=S.mind.srs[c.id]; const due=st&&st.due<=dayNum();
+      const tag=!st?'<span style="color:var(--faint)">new</span>':(due?'<span style="color:var(--gold)">review due</span>':'<span style="color:var(--green)">learned</span>');
+      return `<div class="exrow" data-cid="${c.id}" style="cursor:pointer"><div class="qbody"><div class="nm">${esc(c.title)}</div><div class="sc">${tag}</div></div><span style="color:var(--cyan)">→</span></div>`;
+    }).join('');
+  }).join('');
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">All concepts</div>${list}<div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.querySelectorAll('#modalBody .exrow[data-cid]').forEach(el=>el.onclick=()=>{const id=el.dataset.cid;const st=S.mind.srs[id];closeModal();setTimeout(()=>{if(st)startTest(id,true);else openLesson(id);},80);});
+}
+
+//================= LIBRARY / E-BOOK READER =================
+const SEED_BOOKS=[
+{id:'bk_engine',title:'The Engine Room: why you gas out',subject:'tech',text:`Every fighter runs two engines at once, and knowing how they work is the difference between fading in the third round and still being dangerous when it counts.
+
+The first is your aerobic engine. It burns fuel slowly, using oxygen, and it powers everything from a long walk to the steady background work of staying upright in a fight. It is patient and almost tireless, but it cannot deliver energy fast. The second is your anaerobic engine. It produces energy in a hurry, without waiting for oxygen, and it is what fires your explosive shots, sprawls and scrambles. It is enormously powerful but it runs out fast, and it leaves a mess behind.
+
+That mess is the key to the whole story. When you work hard enough, your muscles produce energy faster than oxygen can keep up, and a by-product called lactate builds up, along with the hydrogen ions that actually make your muscles burn and slow down. People blame "lactic acid," but lactate itself is mostly fuel your body can reuse. The real problem is the acidity that piles up when you cross a certain intensity. That tipping point has a name: your threshold.
+
+Your test put that threshold at a heart rate of roughly 174. Below it, your aerobic engine is keeping the books balanced and you can hold the pace for a long time. Above it, the mess accumulates faster than you can clear it, your output drops, your arms feel heavy, and you "gas." The closer that threshold sits to your maximum, the longer you can fight at a high pace before it happens.
+
+Then there is the size of the aerobic engine itself, measured as VO2max: the most oxygen your body can use per minute. Yours came back at 54, which is genuinely strong. A big engine is not about going fast in a straight line; for a fighter it means something more useful. It means you recover between explosive efforts. The faster you can refill between a scramble and the next exchange, the fresher you are when the next exchange comes.
+
+So here is the trap a lot of athletes fall into. They train almost entirely in the painful zone, going to war every session, because it feels like the hardest work must be the most valuable. But hammering the anaerobic engine without building the aerobic one underneath it just teaches your body to produce the mess faster. It does not teach it to clear the mess, and it does not grow the engine that buys back your recovery.
+
+This is why the boring work matters most. Long, easy sessions at a conversational pace, where you can still talk and breathe through your nose, are not junk miles. At that intensity your body adapts in quiet but powerful ways: it grows more tiny power plants inside your muscle cells, called mitochondria, and builds more small blood vessels to deliver oxygen and carry waste away. The result is a bigger engine that clears lactate faster and pushes your threshold higher. Elite fighters spend years building exactly this base, and most amateurs skip it.
+
+The second piece is teaching your body to tolerate and clear the mess on purpose. That is what interval work does: you push hard enough to flood the system, then back off just enough to start clearing it, over and over. Done with a real aerobic base underneath, this raises the ceiling at which you fall apart. Done without that base, it just burns you out.
+
+The third piece is repeat-sprint ability: short, all-out efforts with short rest, repeated. This is the closest thing to what a fight actually demands, because a fight is not one long effort, it is dozens of explosions stitched together with incomplete rest. The fighter who can fire the tenth explosion almost as hard as the first is the one who wins late.
+
+Put together, the plan writes itself. Build the aerobic base first so the engine is big and recovery is fast. Then sharpen the threshold so you can live at a higher pace without drowning. Then layer in the repeat explosions so your power survives deep into the fight. Skipping straight to the last step is the most common mistake, and it is exactly the one your test results warn against, because your profile shows good power but a system that turns sour a little too quickly under pressure.
+
+None of this is about suffering more. It is about suffering smarter, in the right doses, in the right order, so that when you walk back into the cage your engine is bigger, your threshold is higher, and you are the one still pushing the pace when everyone else is gassing.`},
+{id:'bk_marsh',title:'The Marshmallow Test & real willpower',subject:'psych',text:`In the late 1960s a psychologist named Walter Mischel ran an experiment at a preschool on the Stanford campus that became one of the most famous studies in all of psychology. The setup was simple enough to explain to a four-year-old, which is roughly who the subjects were. A child was left alone in a room with a single treat, often a marshmallow, and a deal: eat it now, or wait about fifteen minutes until the researcher came back and get two. Then the adult left, and a hidden camera watched what happened next.
+
+What happened next is wonderful to watch. Children sniffed the marshmallow, stroked it, turned around, sang to themselves, kicked the table, covered their eyes, and in some cases caved within seconds. Some held out the whole time. On its own that is just a charming study of small children resisting sugar. What made it famous came years later.
+
+Mischel and his colleagues tracked some of those children as they grew up, and reported that the ones who had waited longer tended to do better later in life by various measures, from school results to how they handled stress. The story that spread from this was irresistible and simple: willpower is a fixed trait, some people have it and some do not, and the amount you have as a child quietly determines your future. Delay gratification, the moral went, and you will win at life.
+
+It is a tidy story. It is also, we now know, far too simple, and the more careful findings are actually more useful to you.
+
+Start with what the children who succeeded were really doing. They were not gritting their teeth and white-knuckling their way through raw temptation. The ones who lasted were the ones who changed their situation. They looked away from the treat. They distracted themselves. Crucially, Mischel found that when children were coached to think about the marshmallow differently, to imagine it as a fluffy cloud or a picture rather than a delicious thing to eat, they could suddenly wait far longer. The skill on display was not raw resistance. It was attention management: the ability to cool a hot temptation by changing how you frame it and what you let yourself look at.
+
+That is a very different lesson from "have more willpower." It says willpower is less a muscle you strain and more a set of strategies you can learn. The winners were not stronger; they were better at arranging the moment so the temptation had less grip.
+
+Then, in 2018, a team of researchers led by Tyler Watts ran a much larger and more careful version of the study, with a more diverse group of children and statistical controls the original lacked. Their results trimmed the legend down to size. The link between waiting as a child and succeeding later was much weaker than the famous version suggested, and a lot of it was explained by something else entirely: the child's background. Children from more secure, resourced homes waited longer on average, and those same advantages also predicted later success. The marshmallow was partly just measuring which kids came from stability.
+
+There is one more piece that reframes the whole thing. A separate study showed that whether a child waited depended heavily on whether they had reason to trust the promise. When researchers first proved unreliable, breaking an earlier promise to the same child, those children sensibly grabbed the treat immediately. Why wait for a second marshmallow from an adult who lies? Their "impatience" was not weak character. It was a rational response to an untrustworthy environment.
+
+So what should you actually take from all this, as someone trying to hold the line on training and diet and money?
+
+First, stop treating willpower as a fixed amount of grit you either have or lack. The evidence points the other way. The people who resist temptation best are usually not the ones suffering most; they are the ones who arranged things so they did not have to suffer in the first place. Keep the junk food out of the house and you do not need to resist it at midnight. Lay your kit out the night before and the decision is half made. Put your savings somewhere slightly annoying to reach and the impulse buy dies on its own.
+
+Second, learn the cooling trick. When a craving is hot, do not stare it down. Change the frame, change the focus, put time and distance between you and it. The urge passes faster than it feels like it will.
+
+Third, build a trustworthy environment, including the promises you make to yourself. If you constantly break your own commitments, part of you stops believing the second marshmallow will ever come, and it becomes rational to grab the small reward now. Keep small promises to yourself and your own follow-through becomes easier, because you have given yourself a reason to bet on the future.
+
+The marshmallow test did not really prove that some people are born with iron discipline. Read properly, it shows something far more encouraging: that self-control is mostly strategy, environment and trust, and all three of those are things you can build.`},
+{id:'bk_breath',title:'Breath: the lost art of breathing',subject:'tech',text:`We take roughly 25,000 breaths a day without thinking about a single one, and James Nestor's argument in "Breath" is that most of us are doing it badly — too fast, too shallow, and through the mouth. His book is part history, part self-experiment, and its core message is simple: how you breathe changes your body and mind more than almost anything else you do unconsciously.
+
+Start with the nose. Your nose is not just an air hole; it filters, warms and humidifies the air, and it releases nitric oxide, a molecule that helps your blood vessels open and your body take up oxygen more efficiently. Breathing through your mouth skips all of that. Nestor ran an experiment where he plugged his nose for ten days, and his health measurably worsened — his sleep fell apart, his blood pressure rose, he snored for hours. Switching back to nasal breathing reversed it. Chronic mouth breathing, especially at night, is linked to snoring, broken sleep and even dental problems.
+
+Then comes the counterintuitive part: most of us breathe too much. It feels like more air should mean more oxygen and more energy, but at rest your blood is already almost fully saturated with oxygen. The thing that actually governs how much oxygen reaches your muscles is carbon dioxide. CO2 is not just waste gas to flush out as fast as possible — it is the signal that tells your blood to release oxygen into your tissues. Breathe too hard and too fast, blow off too much CO2, and paradoxically less oxygen gets delivered where you need it. That is why over-breathing can leave you light-headed and anxious.
+
+This reframes the goal. Better breathing is not about gulping more air; it is about tolerating more CO2 and breathing less. People who train this way — slower, lighter breathing — tend to feel calmer and to hold composure under physical stress, because their body stops sounding the alarm at the first rise in CO2.
+
+The other big lever is slowness. Nestor keeps returning to a number: about five and a half breaths per minute, with long, even inhales and exhales. At that pace, breathing and heart rhythm fall into sync, the calming branch of your nervous system takes over, and stress measurably drops. It is the physiology behind why slow breathing settles you before a hard effort or a tense moment.
+
+For you specifically, this plugs straight into your plan. Your Zone 2 sessions already tell you to breathe through your nose if you can — Nestor explains why that cue matters: it keeps the pace honest, builds CO2 tolerance, and trains a calmer, more efficient engine. The fighter who can stay relaxed and breathe slow between exchanges, instead of gasping through the mouth, recovers faster and panics less. Breath control is part of conditioning, not separate from it.
+
+If you want concrete practice, three drills cover most of the benefit. First, simply close your mouth — during the day, on easy training, and ideally at night. Second, practice slow breathing: in for about five and a half seconds, out for about five and a half, for a few minutes, especially before sleep or before a hard round. Third, get comfortable with the mild air-hunger of breathing slightly less than feels natural; that discomfort is the training stimulus for CO2 tolerance, the same way burning legs are the stimulus in a hard interval.
+
+A fair word of caution. Some of the book's bigger claims are dramatic and lean on single experiments or older fringe sources, and you should read those with a raised eyebrow. But the durable core is well supported and costs nothing: breathe through your nose, slow down, exhale fully, and stop over-breathing. The deeper point Nestor lands is that breathing is the one automatic system you can also seize manual control of whenever you choose — a dial you can reach for, to calm down, to focus, to recover, any time you remember it is there.`},
+{id:'bk_sleep',title:'Why We Sleep: the case for 7-9 hours',subject:'psych',text:`We tend to treat sleep as the thing we cut when life gets busy — the most expendable block in the day. Matthew Walker's central argument in "Why We Sleep" is that this is exactly backwards: sleep is not downtime your body merely tolerates, it is active, essential maintenance, and skimping on it quietly degrades nearly everything you care about, from memory to mood to physical recovery.
+
+Two forces decide when you feel sleepy. One is your circadian rhythm, the roughly 24-hour internal clock that rises and falls with light and tells your body when it expects to be awake. The other is sleep pressure: a chemical called adenosine that builds up the longer you are awake and makes you feel steadily more tired. Caffeine works by blocking adenosine — it does not remove the tiredness, it just masks it, and when the caffeine wears off the whole backlog lands at once.
+
+Once you are asleep, the night is not one uniform state. You cycle through stages roughly every ninety minutes. Deep, dreamless sleep, concentrated earlier in the night, is when the body does its physical repair and when the brain files away facts and clears out metabolic waste. Dreaming REM sleep, concentrated in the later cycles toward morning, is when the brain processes emotion, connects ideas and cements skills. Both matter, and they are not interchangeable. This is the catch that makes short sleep so costly: because REM loads into the final cycles, cutting your night from eight hours to six does not shave a flat quarter off everything — it amputates a large share of your REM specifically.
+
+The consequences of running short are broad and well documented. Reaction time and attention fall off a cliff, to the point where heavy sleep loss impairs you about as much as being drunk. Learning suffers, because memories never get properly consolidated. The immune system weakens. Appetite hormones tilt toward overeating. And for an athlete in particular the cost is direct: much of your testosterone and growth hormone release happens during deep sleep, which is precisely when adaptation and tissue repair occur. Train hard and sleep little and you take on the damage without banking the recovery — and your injury risk climbs.
+
+That last point deserves to sit with you. You do not get stronger or faster during training. Training is the stimulus; the adaptation happens while you recover, and the deepest recovery happens while you sleep. In a real sense, sleep is the session you do lying down. An extra hour in bed can do more for your performance than an extra hour of work when you are already tired.
+
+The practical advice is unglamorous and effective. Keep a regular schedule — your clock craves consistency more than any single long lie-in. Keep the room cool and dark. Get daylight early and dim the lights at night. Be honest about caffeine, whose effects linger for many hours, so an afternoon coffee can quietly thin the depth of your night. Alcohol is worse than it feels: it sedates you but fragments sleep and blunts REM.
+
+This is exactly why your app back-calculates a cycle-aligned bedtime on the Rest tab, and why your coach's plan lists seven to nine hours as non-negotiable rather than a nice-to-have. The ninety-minute cycle math is not arbitrary — it aims to wake you near the end of a cycle instead of dragging you out of deep sleep, so you come up sharp instead of wrecked.
+
+One honest caveat. Walker's book was hugely influential but also drew criticism from some scientists for overstating a handful of specific claims and presenting a few scary numbers more confidently than the evidence supports. That critique is fair, and you should hold the most alarming individual statistics loosely. But the central message survives all of it intact and is not seriously disputed: consistent, sufficient sleep is one of the highest-return, lowest-cost things you can do for body and mind. For someone rebuilding as an athlete, it may be the single most undervalued tool you already own.`},
+{id:'bk_habits',title:'Atomic Habits: systems over willpower',subject:'psych',text:`James Clear's "Atomic Habits" opens with one liberating claim: you do not rise to the level of your goals, you fall to the level of your systems. Goals set direction, but the daily system produces the results. Two fighters can share the identical goal of being fight-ready; the one with the better system wins, regardless of who wants it more on any given morning.
+
+The title is the thesis. An atomic habit is a tiny routine that looks insignificant alone but compounds. Clear's image is one percent better each day: barely noticeable daily, but a thirty-seven-fold difference over a year. The flip side is just as true — small bad habits compound into decline. Most real change is not a dramatic overhaul; it is a slightly better default, repeated until it becomes who you are.
+
+That phrase — who you are — is the deepest idea in the book. Most people try to change from the outside in: chase an outcome, grind on the behaviour. Clear argues the durable path runs the other way, from identity outward. Decide who you want to be — "I am someone who trains" — and let each small action be a vote for that identity. You do not need to win every vote, only the majority. A missed session is one vote against; it does not erase the others, unless you let it become two, then three.
+
+The practical engine is his four laws, built on how a habit actually works: a cue triggers a craving, which drives a response, which delivers a reward. To build a good habit, make the cue obvious, the craving attractive, the response easy and the reward satisfying. To break a bad one, invert each: invisible, unattractive, hard, unsatisfying.
+
+Several tactics fall out of this. Environment design beats willpower — the same lesson as the marshmallow study. If the junk food is not in the house, you do not have to resist it; if your kit is laid out the night before, training is half-started before you wake. Habit stacking ties a new habit to an existing one: after I make coffee, I log yesterday's training. The two-minute rule shrinks a daunting habit to something trivial to begin — "read one page," "do one round" — because starting is the hard part and motion creates momentum. And the rule that saves you on bad days: never miss twice. One slip is an accident; two is the start of a new, worse habit.
+
+There is a quiet warning in the book about plateaus. Progress is rarely linear; you put in the work and seem to get nothing back for weeks, because results lag behind effort. Clear calls this the valley of disappointment, and it is where most people quit — right before the breakthrough the accumulated work was about to deliver. Your conditioning rebuild will feel exactly like this: weeks of unglamorous Zone 2 and logging with the payoff arriving later, all at once. The system does not feel like it is working until suddenly it is.
+
+The honest limits are worth naming. The book is light on novel science and heavy on repackaging known behavioural psychology into memorable rules, and the one-percent math is more motivational metaphor than literal forecast. But as an operating manual it is genuinely useful, precisely because it is simple enough to actually run.
+
+For you, the connection is direct: the app in your hand is an atomic-habits machine. The daily quests are obvious cues, the XP and streaks are satisfying rewards, the Coach makes the next response easy by choosing it for you. The whole design exists to make the right action the default and keep your run of identity-votes alive. Clear would say the goal of getting fight-ready is fine, but the boring system underneath — show up, log it, never miss twice — is what actually carries you there.`},
+{id:'bk_dopa',title:'Dopamine Nation: pleasure, pain & discipline',subject:'psych',text:`Anna Lembke is an addiction psychiatrist, and "Dopamine Nation" takes the science of addiction and shows it now describes ordinary modern life. We live in a world engineered to flood us with easy pleasure — phones, sugar, porn, games, endless novelty — and our brains, built for scarcity, are not equipped for that abundance.
+
+Her central image is a balance, a seesaw in the brain between pleasure and pain. Every hit of pleasure tips it toward the pleasure side; the brain hates imbalance and immediately pushes back, tipping just as far toward pain to restore level. That is the comedown, the craving, the faint emptiness after the scroll or the snack. Chase pleasure again to fix it and you tip the seesaw harder, and it rebounds harder. Do this enough and your baseline resets: the seesaw now rests permanently on the pain side. That is what anhedonia is — needing the hit just to feel normal, getting no real joy from it, and feeling flat without it.
+
+The escape is counterintuitive and, for an athlete, encouraging. If pressing the pleasure side drives you into pain, then deliberately pressing the pain side drives you, by the same mechanism, into lasting pleasure. Hard exercise, cold exposure, fasting, intense focus, discomfort willingly chosen — these tip the seesaw toward pain in the moment, and the brain's rebound pushes you toward steady, earned wellbeing afterwards. The calm after a brutal session, the clarity after a fast: that is the seesaw paying you back. Pain chosen on purpose is medicine; pleasure chased compulsively is the poison.
+
+The first practical tool is what she calls a dopamine fast — a deliberate break from your drug of choice, often around a month, long enough for the seesaw to relevel and for ordinary things to feel good again. The discomfort of the first days is just an over-stimulated system finding its baseline. After it, a coffee, a walk, a conversation can feel like enough again.
+
+The second tool is honesty — what she calls radical truth-telling. Addiction thrives in secrecy and self-deception, and naming your behaviours plainly is itself a brake on them. The third is self-binding: building physical and rule-based barriers between you and the easy hit, because in the moment of craving willpower is the weakest tool you own. Leave the phone in another room. Do not keep the thing in the house. The same lesson, again, from a different field: design beats willpower.
+
+A fair caveat: the book leans on vivid clinical stories more than hard data, and "dopamine" has become a pop-science catch-all that oversimplifies a complex system. Treat the neuroscience as a useful metaphor rather than a precise mechanism. But the lived prescription is sound and lines up with everything else in your training: comfort chased endlessly makes you weaker and flatter; discomfort chosen deliberately, in the right doses, makes you stronger and, oddly, happier.
+
+For you this reframes the hard parts of your plan as features, not costs. The boring Zone 2, the discipline of logging food, the willingness to be bored instead of reaching for the phone — these are not only building your engine, they are resetting your reward system so that real life feels good again. The screen offers a cheap tip of the seesaw; the training offers the kind that pays you back.`},
+{id:'bk_scale',title:'Scale: the hidden laws of size',subject:'tech',text:`Geoffrey West is a physicist who turned his tools on living things, cities and companies, and "Scale" is his hunt for the simple mathematical laws hiding behind their staggering variety. The headline is that size changes everything in a precise, predictable way — and almost never the way intuition expects.
+
+Start with a famous puzzle. A mouse and an elephant are both mammals built from similar cells, yet the elephant is roughly 200,000 times heavier. You might guess it burns 200,000 times more energy. It does not — it burns far less than that. Metabolism scales to about the three-quarter power of mass, a pattern so consistent it has a name: Kleiber's law. Double an animal's size and it needs only about 75 percent more energy, not 100 percent. Bigger life is systematically more efficient per cell.
+
+Why three-quarters, and why so universal? West's answer is networks. Life is plumbed by branching, fractal-like distribution systems — your circulatory system, the airways in your lungs, the veins in a leaf — and the geometry of filling a three-dimensional body with such a network forces these particular ratios. The same math that sets an elephant's heart rate sets yours. It even predicts lifespan: bigger animals live longer but their hearts beat slower, and remarkably, most mammals get roughly the same total number of heartbeats in a life. You are, in a deep sense, living the same allotment as the mouse, just spent more slowly.
+
+This sublinear scaling — more output for proportionally less input as you grow — runs through all of biology, and it is why you cannot simply scale things up. A giant shaped like a person could not exist; bone and muscle strength do not scale with body mass the same way, so the giant would shatter under its own weight. Size is never free; every change in scale rewrites what is possible.
+
+Then West turns to cities and finds something startling: they scale too, but differently. Infrastructure like roads and pipes scales sublinearly, like biology — a city twice as big needs less than twice the infrastructure, which is why dense cities are green per person. But the human output of cities — wages, patents, ideas, and crime — scales superlinearly: double the size and you get more than double, because density multiplies interaction. Cities, unlike animals, speed up as they grow, and that engine demands ever-accelerating innovation to avoid collapse — a treadmill West doubts can run forever.
+
+A fair caveat: West reaches for a grand unified theory, and critics argue he sometimes forces messy reality into clean curves; the city and company data are noisier than the animal data. But the core biological scaling laws are real and beautiful.
+
+For you, there is a concrete takeaway buried in the math. Your engine, your heart rate, your recovery, even your weight class sit on these curves. It is part of why adding or dropping mass changes your conditioning out of proportion to the number on the scale — energy cost, heat dissipation and oxygen delivery all scale non-linearly with size. Your lean, efficient build is not just aesthetics; it is you sitting at a favourable point on a curve that has governed life for a billion years. The deeper gift of the book is a way of seeing: behind the chaos of living things sit a few stubborn numbers, and once you notice them you cannot unsee them.`},
+{id:'bk_time',title:'The Order of Time: what time really is',subject:'tech',text:`Carlo Rovelli is a theoretical physicist and a rare one who writes like a poet. "The Order of Time" is his attempt to dismantle, piece by piece, everything you think you know about time — then rebuild something stranger and more beautiful.
+
+He starts by taking time apart. There is no single universal clock ticking for the whole cosmos. Einstein showed that time runs slower where gravity is stronger and where you move faster, and this is not a trick — a clock at sea level genuinely runs slower than one on a mountain, and the difference has been measured. Put two precise clocks at different heights and in time they will disagree. So there is no shared "now" stretched across the universe; the idea of the present moment, everywhere at once, simply dissolves. Your now is only local.
+
+Next he comes for time's direction. In the fundamental equations of physics, the arrow of time barely appears — most of them work the same forwards and backwards. So where does the overwhelming sense that time flows one way, that the past is fixed and the future open, actually come from? Rovelli's answer is entropy, the same idea you have already met. The universe began in a low-entropy, highly ordered state and has been spreading toward disorder ever since. The arrow of time is nothing more than that one-way slide from order to disorder. Heat flows from hot to cold, eggs break and never unbreak, memories pile up of the past and never the future — all of it is entropy increasing. Time's direction is not stamped into reality at the deepest level; it emerges from this statistical drift.
+
+Then the most vertiginous claim: at the most fundamental level, time may not exist at all. In the equations Rovelli works on for quantum gravity, the variable for time can be removed entirely and the physics still works. What we experience as the flow of time, he argues, is not a feature of the universe but of our particular, blurred, large-scale view of it. We are creatures who see the world coarsely — we cannot track every molecule — and out of that blur the sensation of flowing time arises. Time, in this view, is less a fact about the world than a fact about us and our limited perspective on it.
+
+If that sounds cold, Rovelli lands somewhere unexpectedly warm. Losing the illusion of absolute time does not make our experience less real; it makes us part of the same impermanent, interconnected flow as everything else. We are not things, he writes, so much as events — temporary, ongoing happenings, like a wave or a song, rather than fixed objects.
+
+A fair caveat: much of the final third rests on Rovelli's own preferred theory of quantum gravity, which is unproven and not the only contender; he is honest that he is offering one physicist's vision, not settled fact. Read it as a brilliant, grounded provocation rather than a closed case.
+
+It connects back to the entropy concept already in your app, but pushes it much further: the same slide toward disorder that caps an engine's efficiency and makes heat flow one way is also, quietly, the thing that gives your whole life its sense of direction. The minutes you spend training, reading and recovering are not ticking off some cosmic clock — they are you, an event in progress, riding the one arrow the universe actually has.`},
+];
+const _pageCache={};
+function paginate(text){
+  const paras=text.split(/\n\n+/); const pages=[]; let cur='';
+  for(let p of paras){ p=p.trim(); if(!p)continue;
+    if((cur.length+p.length)>880 && cur){ pages.push(cur); cur=''; }
+    if(p.length>880){ let i=0; while(i<p.length){ pages.push(p.slice(i,i+880)); i+=880; } continue; }
+    cur+=(cur?'\n\n':'')+p; }
+  if(cur)pages.push(cur);
+  return pages.length?pages:[text];
+}
+function allBooks(){ return SEED_BOOKS.concat(S.mind.library||[]); }
+function bookById(id){ return allBooks().find(b=>b.id===id); }
+function bookPages(b){ if(!b)return['']; if(!_pageCache[b.id])_pageCache[b.id]=paginate(b.text); return _pageCache[b.id]; }
+function readingProg(id){
+  S.mind.reading=S.mind.reading||{};
+  let pr=S.mind.reading[id];
+  if(!pr){ pr={mark:0,furthest:0,claimed:0,finished:false}; S.mind.reading[id]=pr; }
+  if(pr.furthest===undefined)pr.furthest=pr.mark||0;
+  if(pr.claimed===undefined)pr.claimed=0;
+  if(pr.finished===undefined)pr.finished=false;
+  return pr;
+}
+const MP_PER_PAGE=5, FINISH_BONUS=20;
+function rewardReading(){
+  const b=bookById(_rBook); const pages=bookPages(b); const pr=readingProg(_rBook);
+  pr.furthest=Math.max(pr.furthest,pr.mark);
+  const reached=pr.furthest+1; let gained=0;
+  if(reached>pr.claimed){ gained+=(reached-pr.claimed)*MP_PER_PAGE; pr.claimed=reached; }
+  let finishedNow=false;
+  if(pr.furthest>=pages.length-1 && !pr.finished){ pr.finished=true; finishedNow=true; gained+=FINISH_BONUS; }
+  if(gained>0){ S.mind.mp+=gained; S.mind.subj[b.subject]=(S.mind.subj[b.subject]||0)+gained; save(); renderHud(); }
+  return {gained,finishedNow};
+}
+
+let _rBook=null;
+function openReader(id){ _rBook=id; readingProg(id); document.getElementById('reader').classList.add('show'); renderReaderPage();
+  document.getElementById('rClose').onclick=()=>document.getElementById('reader').classList.remove('show');
+  document.getElementById('rPrev').onclick=()=>readerNav(-1);
+  document.getElementById('rNext').onclick=()=>readerNav(1);
+}
+function renderReaderPage(){
+  const b=bookById(_rBook); const pages=bookPages(b); const pr=readingProg(_rBook);
+  pr.mark=Math.max(0,Math.min(pr.mark,pages.length-1));
+  const res=rewardReading();
+  document.getElementById('rTitle').textContent=b.title;
+  document.getElementById('rPage').innerHTML=esc(pages[pr.mark]).replace(/\n/g,'<br>');
+  document.getElementById('rPageNum').textContent=`Page ${pr.mark+1} / ${pages.length}`;
+  const pct=Math.round((pr.furthest+1)/pages.length*100);
+  document.getElementById('rGoalBar').style.width=pct+'%';
+  document.getElementById('rGoalTxt').textContent=pr.finished?`✓ Finished · ${pr.claimed*MP_PER_PAGE+FINISH_BONUS} MP earned — kept for review`:`Progress ${pct}% · +${MP_PER_PAGE} MP per new page`;
+  document.getElementById('rPrev').disabled=pr.mark<=0;
+  document.getElementById('rNext').disabled=pr.mark>=pages.length-1;
+  document.getElementById('rPage').scrollTop=0;
+  save();
+  if(res.finishedNow)toast(`📗 ${b.title} finished · +${FINISH_BONUS} MP bonus!`);
+  else if(res.gained>0)toast(`+${res.gained} MP`);
+}
+function readerNav(d){ const pages=bookPages(bookById(_rBook)); const pr=readingProg(_rBook); pr.mark=Math.max(0,Math.min(pr.mark+d,pages.length-1)); renderReaderPage(); }
+function openAddBook(){
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Add a book</div>
+    <div class="lesson" style="font-size:13px">Paste text, or import a .txt / .md file you own. It paginates and bookmarks automatically. (For a study you want in plain language, ask me in chat and I'll write you a reader edition.)</div>
+    <input id="bkTitle" placeholder="Title" style="width:100%;margin-top:10px">
+    <select id="bkSubj" style="width:100%;margin-top:8px"><option value="tech">Science & Tech</option><option value="psych">Psychology</option></select>
+    <textarea id="bkText" placeholder="Paste the text here…" style="margin-top:8px;min-height:120px"></textarea>
+    <div class="field" style="margin-top:10px"><button class="btn ghost sm" id="bkFile">📂 Import .txt/.md</button><button class="btn" id="bkSave">Add book</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('bkFile').onclick=()=>document.getElementById('bookFile').click();
+  document.getElementById('bkSave').onclick=()=>{const t=document.getElementById('bkTitle').value.trim();const tx=document.getElementById('bkText').value.trim();if(!t||!tx)return;addBook(t,document.getElementById('bkSubj').value,tx);};
+}
+function addBook(title,subject,text){ const id='bk_'+Math.random().toString(36).slice(2,8); S.mind.library=S.mind.library||[]; S.mind.library.push({id,title,subject,text}); save(); closeModal(); renderView(); toast('📚 Added: '+title); }
+
+// book file import
+document.getElementById('bookFile').addEventListener('change',ev=>{
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{const tx=document.getElementById('bkText');const ti=document.getElementById('bkTitle');if(tx)tx.value=r.result;if(ti&&!ti.value)ti.value=f.name.replace(/\.(txt|md)$/i,'');toast('File loaded — review and Add');};
+  r.readAsText(f);ev.target.value='';
+});
+
+//================= PWA =================
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;const b=document.getElementById('installBtn');if(b)b.style.display='inline-block';});
+async function doInstall(){if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;const b=document.getElementById('installBtn');if(b)b.style.display='none';}
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}
+
+load();
+</script>
+</body>
+</html>
