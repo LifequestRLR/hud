@@ -277,6 +277,46 @@
   .rnav{font-family:'Chakra Petch';font-size:13px;letter-spacing:.04em;color:#0a0c12;background:linear-gradient(180deg,var(--gold),var(--gold-dim));border:none;border-radius:9px;padding:11px 20px;cursor:pointer}
   .rnav:disabled{opacity:.35;cursor:default;background:var(--panel2);color:var(--muted)}
   .rpnum{font-family:'JetBrains Mono';font-size:12px;color:var(--muted)}
+
+  /* MONEY HUD */
+  .accts{display:flex;gap:10px;margin-top:12px}
+  .acct{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px 6px;cursor:pointer;transition:.15s;font-family:inherit}
+  .acct:active{transform:scale(.97)}
+  .acct .aic{font-size:15px}
+  .acct .abal{font-family:'Chakra Petch';font-size:17px;font-weight:700;color:var(--ink)}
+  .acct .alab{font-size:8.5px;letter-spacing:.14em;color:var(--muted)}
+  .accrow{display:flex;gap:10px}
+  .accbox{flex:1;text-align:center;border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:13px 6px}
+  .accbox .accic{font-size:18px}
+  .accbox .accbal{font-family:'Chakra Petch';font-size:20px;font-weight:700;margin-top:3px}
+  .accbox .acclab{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .bosscard{border:1px solid var(--gold-dim);border-radius:16px;background:linear-gradient(160deg,rgba(245,196,81,.10),var(--panel2));padding:16px;margin-bottom:13px;box-shadow:var(--glow-gold)}
+  .bosslbl{font-family:'Chakra Petch';font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+  .bossname{font-family:'Chakra Petch';font-size:22px;font-weight:700;margin:4px 0 10px}
+  .bosshp{position:relative;height:22px;border-radius:9px;background:#0c0f18;border:1px solid var(--line2);overflow:hidden}
+  .bosshp>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));box-shadow:var(--glow-gold);transition:width .6s cubic-bezier(.2,.7,.2,1)}
+  .bossmeta{display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:12px;color:var(--muted);margin-top:7px}
+  .coachtext{font-size:13.5px;line-height:1.6;color:#e8ecf7}
+  .msummary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .msummary .mbox{text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--panel2);padding:9px 3px}
+  .msummary .mv{font-family:'Chakra Petch';font-size:15px;font-weight:700}
+  .msummary .ml{font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .trendline{font-family:'JetBrains Mono';font-size:11px;color:var(--muted);margin-top:11px}
+  .catrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .catrow .catic{font-size:14px;width:18px;text-align:center}
+  .catrow .catname{font-size:12.5px;min-width:84px}
+  .catrow .catamt{font-family:'JetBrains Mono';font-size:11.5px;color:var(--ink);min-width:58px;text-align:right}
+  .catrow .catbar{flex:1;height:7px;border-radius:4px;background:#0c0f18;border:1px solid var(--line);overflow:hidden}
+  .catrow .catbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--orange),#c77a35);border-radius:4px;transition:width .4s}
+  .leakflag{font-size:12px;color:var(--gold);background:rgba(245,196,81,.07);border:1px solid var(--gold-dim);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5}
+  .lrow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+  .lrow:last-child{border:0}
+  .lrow .lic{font-size:15px;width:20px;text-align:center}
+  .lrow .lbody{flex:1;min-width:0}
+  .lrow .ld{font-size:13.5px}
+  .lrow .ldt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint)}
+  .lrow .lamt{font-family:'JetBrains Mono';font-size:14px}
+  .lrow .lamt.pos{color:var(--green)}.lrow .lamt.neg{color:var(--red)}
   @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.phases{flex-direction:column}}
 </style>
 </head>
@@ -414,7 +454,7 @@ const DEFAULT={
   ],
   programs:buildPrograms(),
   session:null, sessions:[],
-  ledger:[], balance:0, journal:[], wakeTime:"07:00",
+  ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, journal:[], wakeTime:"07:00",
   mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}},
   events:[], // imported calendar
   alarm:{wakeBy:"07:00", workStart:"", workEnd:""},
@@ -427,6 +467,7 @@ async function load(){
   // seed upcoming events on first run
   if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
   S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{};
+  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[];
   rolloverDay(); booted=true; renderAll();
 }
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S)),250);}
@@ -461,12 +502,14 @@ function renderHud(){
       <div class="who"><h1 contenteditable="true" id="nameEdit" spellcheck="false" style="outline:none">${esc(S.name)}<span class="lvl-badge">LVL ${L.lvl}</span></h1>
         <div class="sub"><span class="streak">🔥 ${S.streak}d</span><span>·</span><span class="clock">${dateStr} · ${clock}</span><span>·</span><span style="color:var(--gold)">🎯 ${daysToFight()}d to target</span><button class="installpill" id="installBtn">Install</button></div></div></div>
     <div class="xpbar"><div class="meta"><span>XP ${L.into}/${L.need}</span><span>TOTAL ${S.totalXp}</span></div><div class="track"><div class="fill" style="width:${L.pct}%"></div></div></div>
-    <div class="stats">${chip('🫁','VO2MAX',(lastV('m_vo2')??'–'))}${chip('💪','PULL/DIP',(lastV('m_pull')??'–')+'/'+(lastV('m_dip')??'–'))}${chip('⚖️','WEIGHT',(lastV('m_bw')??'79.6')+'kg')}${chip('🥊','SESSIONS',S.sessions.length)}</div>`;
+    <div class="stats">${chip('🫁','VO2MAX',(lastV('m_vo2')??'–'))}${chip('💪','PULL/DIP',(lastV('m_pull')??'–')+'/'+(lastV('m_dip')??'–'))}${chip('⚖️','WEIGHT',(lastV('m_bw')??'79.6')+'kg')}${chip('🥊','SESSIONS',S.sessions.length)}</div>
+    <div class="accts"><button class="acct" id="acctDaily"><span class="aic">💳</span><span class="abal">€${fmt(S.balance)}</span><span class="alab">DAILY</span></button><button class="acct" id="acctSav"><span class="aic">🏦</span><span class="abal">€${fmt(S.savings.saved)}</span><span class="alab">SAVINGS</span></button></div>`;
   const ne=document.getElementById('nameEdit');
   ne.addEventListener('blur',()=>{S.name=ne.textContent.trim()||"Bilal";save();});
   ne.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ne.blur();}});
   if(deferredPrompt){const b=document.getElementById('installBtn');if(b)b.style.display='inline-block';}
   const ib=document.getElementById('installBtn');if(ib)ib.onclick=doInstall;
+  ['acctDaily','acctSav'].forEach(i=>{const e=document.getElementById(i);if(e)e.onclick=()=>{active='gold';renderTabs();renderView();};});
 }
 function chip(ic,l,v){return `<div class="stat"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`;}
 function lastV(mid){const m=S.metrics.find(x=>x.id===mid);return m&&m.log.length?m.log[m.log.length-1].v:null;}
@@ -696,10 +739,124 @@ function spark(log){
   return `<div style="margin-top:10px"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#46d6c8" stop-opacity=".28"/><stop offset="1" stop-color="#46d6c8" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#g)"/><path d="${d}" fill="none" stroke="#46d6c8" stroke-width="2" stroke-linejoin="round"/><circle cx="${lst[0].toFixed(1)}" cy="${lst[1].toFixed(1)}" r="3.4" fill="#f5c451"/></svg></div>`;
 }
 
-//================= TREASURY =================
+//================= TREASURY / MONEY =================
+const CATS=[
+ {k:'income',ic:'💰',label:'Income',type:'in'},
+ {k:'food',ic:'🍎',label:'Groceries',type:'out'},
+ {k:'eatingout',ic:'🍔',label:'Eating out',type:'out',disc:true},
+ {k:'transport',ic:'🚗',label:'Transport',type:'out'},
+ {k:'gym',ic:'🥊',label:'Training',type:'out'},
+ {k:'bills',ic:'🧾',label:'Bills & rent',type:'out'},
+ {k:'fun',ic:'🎉',label:'Going out',type:'out',disc:true},
+ {k:'shopping',ic:'🛍️',label:'Shopping',type:'out',disc:true},
+ {k:'other',ic:'📦',label:'Other',type:'out'},
+];
+function catBy(k){return CATS.find(c=>c.k===k)||(k==='savings'?{k:'savings',ic:'🏦',label:'Savings'}:{k:'other',ic:'📦',label:'Other',type:'out'});}
+function monthKey(off){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-(off||0));return d.toISOString().slice(0,7);}
+function monthName(){return new Date().toLocaleDateString([],{month:'long'});}
+function monthStats(off){
+  const key=monthKey(off);
+  const txns=S.ledger.filter(t=>(t.day||'').slice(0,7)===key);
+  let income=0,spending=0; const byCat={};
+  txns.forEach(t=>{const c=t.cat||'other';
+    if(c==='income')income+=t.amt;
+    else {spending+=-t.amt; byCat[c]=(byCat[c]||0)+(-t.amt);}});
+  const savLog=(S.savings.log||[]).filter(l=>(l.day||'').slice(0,7)===key);
+  const savings=savLog.reduce((s,l)=>s+l.amt,0), savedCount=savLog.filter(l=>l.amt>0).length;
+  const cats=Object.keys(byCat).map(k=>{const c=catBy(k);return {k,ic:c.ic,label:c.label,amt:byCat[k],disc:!!c.disc};}).sort((a,b)=>b.amt-a.amt);
+  const maxCat=cats.length?cats[0].amt:1;
+  const discs=cats.filter(c=>c.disc);
+  const leak=discs.length?discs[0]:(cats.length?cats[0]:null);
+  return {income,spending,savings,savedCount,savingsRate:income>0?savings/income:0,cats,maxCat,leak};
+}
+function moneyCoach(){
+  const m=monthStats(0), s=S.savings;
+  if(s.target>0 && s.saved>=s.target) return "Boss down. Set a bigger goal and keep the saving habit alive — momentum is the whole game.";
+  if(m.income>0 && m.savings===0) return `You've logged €${fmt(m.income)} of income this month but saved nothing yet. Feed the boss even €10 — the habit matters more than the amount right now.`;
+  if(m.income>0 && m.spending>m.income) return `You spent more than you earned this month (€${fmt(m.spending)} vs €${fmt(m.income)}). Trim the biggest leak before it eats into the goal.`;
+  if(m.leak && m.leak.disc && m.leak.amt>0) return `${m.leak.label} is your biggest leak this month at €${fmt(m.leak.amt)}. Cap it next month and redirect the difference straight to the boss.`;
+  if(m.income>0 && m.savingsRate>=0.2) return `Strong month — you're saving ${Math.round(m.savingsRate*100)}% of what you earn. One more contribution makes it a streak.`;
+  return "Log your income, a few expenses by category, and a savings contribution — the coach sharpens with data.";
+}
+function openGoalEdit(){
+  const s=S.savings;
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Your savings boss</div>
+    <div class="lesson" style="font-size:13px">Name a real, reachable target. A classic first boss is an emergency buffer — about one month of expenses. Beat it, then set a bigger one.</div>
+    <input id="gName" placeholder="Goal name (e.g. Emergency fund)" value="${esc(s.name||'')}" style="width:100%;margin-top:10px">
+    <input id="gTarget" type="number" step="1" placeholder="Target €" value="${s.target||''}" style="width:100%;margin-top:8px">
+    <div class="field" style="margin-top:10px"><button class="btn block" id="gSave">Save goal</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('gSave').onclick=()=>{const n=val('gName');const t=parseFloat(document.getElementById('gTarget').value);if(!(t>0))return;S.savings.name=n||'Savings Goal';S.savings.target=t;save();closeModal();renderView();toast('🎯 Boss set');};
+}
+function addTx(){
+  const d=val('txDesc'); const a=parseFloat(document.getElementById('txAmt').value); const cat=document.getElementById('txCat').value;
+  if(isNaN(a))return;
+  const c=catBy(cat); const amt=(c.type==='in')?Math.abs(a):-Math.abs(a);
+  S.ledger.push({day:today(),desc:d||c.label,amt,cat});
+  S.balance=Math.round((S.balance+amt)*100)/100;
+  save(); renderView();
+  toast(`${amt>=0?'+':'−'}€${fmt(Math.abs(amt))} · ${c.label}`);
+}
+function transfer(dir){
+  const amt=parseFloat(document.getElementById('xferAmt').value);
+  if(isNaN(amt)||amt<=0)return;
+  if(dir==='save'){
+    S.balance=Math.round((S.balance-amt)*100)/100;
+    S.savings.saved=Math.round((S.savings.saved+amt)*100)/100;
+    S.savings.log.push({day:today(),amt});
+    const def=S.savings.target>0 && S.savings.saved>=S.savings.target;
+    save(); renderHud(); renderView();
+    toast(def?`🏆 ${S.savings.name} defeated!`:`⚔️ €${fmt(amt)} → Savings`);
+  } else {
+    if(amt>S.savings.saved){toast('Not enough in savings');return;}
+    S.savings.saved=Math.round((S.savings.saved-amt)*100)/100;
+    S.balance=Math.round((S.balance+amt)*100)/100;
+    S.savings.log.push({day:today(),amt:-amt});
+    save(); renderHud(); renderView();
+    toast(`€${fmt(amt)} → Daily`);
+  }
+}
 function viewGold(){
-  const rows=S.ledger.slice().reverse().slice(0,40).map(t=>`<div class="row"><div class="d">${esc(t.desc)}<div class="dt">${t.day}</div></div><div class="amt ${t.amt>=0?'pos':'neg'}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</div></div>`).join('')||`<div class="empty">No transactions logged.</div>`;
-  return `<div class="card"><h2>💰 Treasury <span class="n">${S.ledger.length} entries</span></h2><div class="balance"><div class="v ${S.balance>=0?'pos':'neg'}">€${fmt(S.balance)}</div><div class="l">Current balance</div></div><div class="field"><input class="grow" id="txDesc" placeholder="What was it?"><input id="txAmt" type="number" step="0.01" placeholder="0.00" style="width:100px"><button class="btn ghost sm" id="txIn">+ In</button><button class="btn sm danger" id="txOut">− Out</button></div><div class="ledger" style="margin-top:12px">${rows}</div></div>`;
+  const m=monthStats(0), prev=monthStats(1), s=S.savings;
+  const pctSaved=s.target>0?Math.min(100,Math.round(s.saved/s.target*100)):0;
+  const remaining=Math.max(0,s.target-s.saved), defeated=s.target>0&&s.saved>=s.target;
+  const acctCard=`<div class="card"><h2>🏦 Accounts</h2>
+    <div class="accrow">
+      <div class="accbox"><div class="accic">💳</div><div class="accbal">€${fmt(S.balance)}</div><div class="acclab">Daily</div></div>
+      <div class="accbox"><div class="accic">🏦</div><div class="accbal">€${fmt(s.saved)}</div><div class="acclab">Savings</div></div>
+    </div>
+    <div class="field" style="margin-top:12px"><input id="xferAmt" type="number" step="0.01" placeholder="Transfer amount (€)" class="grow"></div>
+    <div class="field"><button class="btn" id="toSav">💳→🏦 To savings</button><button class="btn ghost" id="toDaily">🏦→💳 To daily</button></div>
+    <div class="hint">Moving money to savings chips the boss below. Withdrawing moves it back and lowers it — honest tracking beats pretending.</div>
+  </div>`;
+  const bossCard=`<div class="bosscard">
+    <div class="bosslbl">🐉 Savings Boss</div>
+    <div class="bossname">${esc(s.name||'Set your goal')}</div>
+    <div class="bosshp"><i style="width:${pctSaved}%"></i></div>
+    <div class="bossmeta"><span>€${fmt(s.saved)} / €${fmt(s.target)}</span><span>${defeated?'DEFEATED 🏆':pctSaved+'% · €'+fmt(remaining)+' to go'}</span></div>
+    ${defeated?`<button class="btn block" id="newBoss" style="margin-top:12px">🏆 Set a bigger goal</button>`:''}
+    <div class="hint">${m.savedCount?`Fed the boss ${m.savedCount}× this month — that's the habit working.`:'Transfer to savings above to chip it down.'} · <span id="editGoal" style="color:var(--cyan);cursor:pointer">edit goal</span></div>
+  </div>`;
+  const coach=`<div class="card" style="border-color:var(--gold-dim)"><h2 style="color:var(--gold)">🧭 Money Coach <span class="n">one move</span></h2><div class="coachtext">${esc(moneyCoach())}</div></div>`;
+  const trend = prev.spending>0 ? (m.spending>prev.spending?`▲ €${fmt(m.spending-prev.spending)} more spent than last month`:`▼ €${fmt(prev.spending-m.spending)} less spent than last month`) : '';
+  const catBars=m.cats.length?m.cats.map(c=>`<div class="catrow"><span class="catic">${c.ic}</span><span class="catname">${esc(c.label)}</span><span class="catamt">€${fmt(c.amt)}</span><div class="catbar"><i style="width:${Math.round(c.amt/m.maxCat*100)}%"></i></div></div>`).join(''):'<div class="empty">No spending logged this month.</div>';
+  const report=`<div class="card"><h2>📊 This Month <span class="n">${monthName()}</span></h2>
+    <div class="msummary"><div class="mbox"><div class="mv" style="color:var(--green)">€${fmt(m.income)}</div><div class="ml">in</div></div><div class="mbox"><div class="mv" style="color:var(--red)">€${fmt(m.spending)}</div><div class="ml">spent</div></div><div class="mbox"><div class="mv" style="color:var(--gold)">€${fmt(m.savings)}</div><div class="ml">saved</div></div><div class="mbox"><div class="mv" style="color:var(--cyan)">${m.income>0?Math.round(m.savingsRate*100):0}%</div><div class="ml">save rate</div></div></div>
+    ${trend?`<div class="trendline">${trend}</div>`:''}
+    <div style="margin-top:14px">${catBars}</div>
+    ${m.leak&&m.leak.amt>0?`<div class="leakflag">💸 Biggest leak: <b>${esc(m.leak.label)}</b> — €${fmt(m.leak.amt)} this month.</div>`:''}
+  </div>`;
+  const cats=CATS.map(c=>`<option value="${c.k}">${c.ic} ${c.label}</option>`).join('');
+  const rows=S.ledger.slice().reverse().slice(0,30).map(t=>{const c=catBy(t.cat);return `<div class="lrow"><span class="lic">${c.ic}</span><div class="lbody"><div class="ld">${esc(t.desc||c.label)}</div><div class="ldt">${t.day} · ${esc(c.label)}</div></div><div class="lamt ${t.amt>=0?'pos':'neg'}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</div></div>`;}).join('')||'<div class="empty">No transactions yet.</div>';
+  const add=`<div class="card"><h2>➕ Log Transaction <span class="n">Daily €${fmt(S.balance)}</span></h2>
+    <div class="field"><input id="txDesc" class="grow" placeholder="What was it?"><input id="txAmt" type="number" step="0.01" placeholder="€" style="width:88px"></div>
+    <div class="field"><select id="txCat" class="grow">${cats}</select><button class="btn" id="txAdd">Add</button></div>
+    <div class="ledger" style="margin-top:12px">${rows}</div>
+    <div class="hint">Income &amp; expenses hit your Daily account. Budgeting &amp; habit coaching — not financial advice. No bank logins, ever.</div>
+  </div>`;
+  return acctCard+bossCard+coach+report+add;
 }
 
 //================= MIND =================
@@ -791,7 +948,13 @@ const bind={
       el.querySelector('.logBtn').onclick=()=>{const v=parseFloat(el.querySelector('.logVal').value);if(isNaN(v))return;m.log.push({day:today(),v});awardXp(10);toast('+10 XP · logged');save();renderHud();renderView();};});
     add('mAdd',()=>{const n=val('mName');if(!n)return;S.metrics.push({id:id(),name:n,unit:val('mUnit')||'',lowerBetter:val('mDir')==='1',goal:'',log:[]});save();renderView();});
   },
-  gold(){const post=s=>{const d=val('txDesc'),a=parseFloat(document.getElementById('txAmt').value);if(!d||isNaN(a))return;const amt=s*Math.abs(a);S.ledger.push({day:today(),desc:d,amt});S.balance=Math.round((S.balance+amt)*100)/100;save();renderHud();renderView();};add('txIn',()=>post(1));add('txOut',()=>post(-1));},
+  gold(){
+    add('toSav',()=>transfer('save'));
+    add('toDaily',()=>transfer('daily'));
+    add('newBoss',openGoalEdit);
+    add('txAdd',addTx);
+    const eg=document.getElementById('editGoal'); if(eg)eg.onclick=openGoalEdit;
+  },
   mind(){
     add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
     add('mReview',()=>{const p=mindPick();if(p.concept)startTest(p.concept.id,true);});
