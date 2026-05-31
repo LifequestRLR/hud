@@ -254,6 +254,13 @@
   .opt.wrong{border-color:var(--red);background:rgba(239,95,107,.12);color:var(--red)}
   .fb{font-family:'Chakra Petch';font-size:14px;margin-top:6px}.fbok{color:var(--green)}.fbno{color:var(--red)}
   .fbex{font-size:13px;color:var(--muted);line-height:1.55;margin-top:6px}
+  .aiload{display:flex;flex-direction:column;align-items:center;gap:14px;padding:38px 10px}
+  .aispin{width:38px;height:38px;border-radius:50%;border:3px solid var(--line2);border-top-color:var(--cyan);animation:aispin .8s linear infinite}
+  @keyframes aispin{to{transform:rotate(360deg)}}
+  .aimsg{font-family:'JetBrains Mono';font-size:12px;color:var(--muted);text-align:center}
+  .scorebar{height:10px;border-radius:6px;background:#0c0f18;border:1px solid var(--line2);overflow:hidden;margin-top:8px}
+  .scorebar>i{display:block;height:100%;border-radius:6px;transition:width .6s cubic-bezier(.2,.7,.2,1)}
+  .genbadge{font-family:'JetBrains Mono';font-size:9.5px;color:var(--cyan);border:1px solid var(--cyan-dim);border-radius:6px;padding:2px 6px;margin-left:6px}
 
   /* LIBRARY + READER */
   .bookrow{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px;margin-bottom:8px;cursor:pointer;transition:.15s}
@@ -349,6 +356,7 @@
     <div class="reader-nav"><button class="rnav" id="rPrev">‹ Prev</button><span class="rpnum" id="rPageNum"></span><button class="rnav" id="rNext">Next ›</button></div>
   </div>
 </div>
+<input type="file" id="backupFile" accept="application/json,.json" style="display:none">
 <input type="file" id="bookFile" accept=".txt,.md,text/plain" style="display:none">
 <input type="file" id="icsInput" accept=".ics" style="display:none">
 
@@ -455,22 +463,53 @@ const DEFAULT={
   programs:buildPrograms(),
   session:null, sessions:[],
   ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, journal:[], wakeTime:"07:00",
-  mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}},
+  mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}, generated:[]},
+  backend:{url:'', key:''},
   events:[], // imported calendar
   alarm:{wakeBy:"07:00", workStart:"", workEnd:""},
 };
 
 let S=structuredClone(DEFAULT), booted=false, saveT;
 async function load(){
+  try{ if(navigator.storage && navigator.storage.persist){ await navigator.storage.persist(); } }catch(e){}
   const raw=await store.get(KEY);
   if(raw){try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(raw));}catch(e){}}
   // seed upcoming events on first run
   if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
-  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{};
+  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
+      S.backend=S.backend||{url:'',key:''};
   S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[];
   rolloverDay(); booted=true; renderAll();
 }
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S)),250);}
+function exportData(){
+  try{
+    const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`lifequest-backup-${today()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast('💾 Backup saved');
+  }catch(e){toast('Backup failed');}
+}
+function importData(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      if(!data||typeof data!=='object'||!('totalXp' in data||'metrics' in data||'savings' in data)) throw 0;
+      S=Object.assign(structuredClone(DEFAULT),data);
+      save();
+      S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
+      S.backend=S.backend||{url:'',key:''};
+      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[];
+      renderAll();
+      toast('✓ Backup restored');
+    }catch(e){toast('Not a valid backup file');}
+  };
+  r.readAsText(file);
+}
 function rolloverDay(){
   const t=today();
   if(S.dailies.length && S.dailies[0].day!==t){
@@ -569,6 +608,12 @@ function viewCamp(){
       <b style="color:var(--orange)">Jun 14 → mid-Aug</b> — gym closed. <b>Solo mode: this app is your coach.</b> The phase programs replace your sessions — bar, dips &amp; outdoor only, exactly what your plan is built on. Skills pause; engine, lactate tolerance and repeat-sprint power get built so you walk back in sharper than you left.
     </div>
     <div class="hint">When the gym reopens, keep the app for the solo conditioning a coach can't watch (Z2, sprints) and let mat time cover skills.</div>
+  </div>
+  <div class="card">
+    <h2>💾 Backup &amp; Restore <span class="n">your data is safe</span></h2>
+    <div class="info" style="margin:0 0 10px">Your progress is saved on this phone and survives app updates. For total safety — a new phone, or anything unexpected — save a backup file now and then, and restore it anytime.</div>
+    <div class="field"><button class="btn ghost sm" id="dataExport">💾 Save backup</button><button class="btn ghost sm" id="dataImport">📂 Restore backup</button></div>
+    <div class="hint">The backup is a file on your device. It's never uploaded anywhere.</div>
   </div>`;
 }
 
@@ -892,6 +937,11 @@ function viewMind(){
     <div class="hint">Each track levels up as you earn Mind Points. Concepts you pass come back for spaced review — that's what makes knowledge stick.</div></div>
   <div class="card" style="border-color:#473e7a"><h2 style="color:var(--violet)">🧭 Mind Coach <span class="n">study this now</span></h2>${coachHtml}
     <div class="field" style="margin-top:10px"><button class="btn ghost sm" id="mBrowse">Browse all concepts</button><button class="btn ghost sm" id="mReflect2">💭 Reflect</button></div></div>
+  <div class="card" style="border-color:var(--cyan-dim)"><h2 style="color:var(--cyan)">✨ Learn anything <span class="n">${backendOn()?'live tutor on':'tutor off'}</span></h2>
+    <div class="info" style="margin:0 0 10px">Type any topic and the tutor writes you a plain-language lesson, then tests you on what you actually understood.</div>
+    <input id="genTopic" placeholder="e.g. lactate threshold, loss aversion…" style="width:100%">
+    <div class="field" style="margin-top:8px"><select id="genTrack" class="grow">${SUBJECTS.map(s=>`<option value="${s.key}">${s.icon} ${s.name}</option>`).join('')}</select><button class="btn" id="genBtn">Generate</button></div>
+    <div class="hint">${backendOn()?'Lessons save into the track you pick and come back for spaced review. ':''}<span id="aiCog" style="color:var(--cyan);cursor:pointer">⚙ AI settings</span></div></div>
   <div class="card"><h2>📚 Library <span class="n">${books.length} books</span></h2>${libHtml}
     <div class="field" style="margin-top:6px"><button class="btn ghost sm" id="addBook">+ Add book</button></div>
     <div class="hint">Bookmarks save automatically — hit your page goal across as many sessions as you like to bank MP. Want a study in plain language? Ask me in chat and I'll write a reader edition for your library.</div></div>
@@ -912,6 +962,8 @@ const bind={
       el.querySelector('[data-act=del]').onclick=()=>{S.quests=S.quests.filter(x=>x.id!==q.id);save();renderView();};
     });
     add('mqAdd',()=>{const t=val('mqTitle');if(!t)return;S.quests.push({id:id(),title:t,cur:0,target:Math.max(1,+val('mqTarget')||10),tag:'fight'});save();renderView();});
+    add('dataExport',exportData);
+    const di=document.getElementById('dataImport'); if(di)di.onclick=()=>document.getElementById('backupFile').click();
   },
   train(){
     if(S.session){
@@ -973,6 +1025,9 @@ const bind={
     add('mReflect',openReflect); add('mReflect2',openReflect); add('mBrowse',openBrowse);
     document.querySelectorAll('#view .bookrow').forEach(el=>el.onclick=()=>openReader(el.dataset.bid));
     add('addBook',openAddBook);
+    add('genBtn',generateLesson);
+    const cog=document.getElementById('aiCog'); if(cog)cog.onclick=openAISettings;
+    const gt=document.getElementById('genTopic'); if(gt)gt.addEventListener('keydown',e=>{if(e.key==='Enter')generateLesson();});
     const ta=document.getElementById('jText'); const pc=document.getElementById('promptChip');
     if(pc&&ta)pc.onclick=()=>{ta.value=pc.textContent.replace('💭 ','').replace(' — tap to use','')+"\n\n";ta.focus();};
     add('jSave',()=>{const t=ta.value.trim();if(!t)return;S.journal.push({when:new Date().toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),text:t});S.mind.mp+=10;toast('+10 MP · reflection saved');save();renderView();});
@@ -1113,12 +1168,22 @@ function figureSVG(anim){
     </g></svg>`;
 }
 const RING_CIRC=2*Math.PI*58;
+// keep screen awake during guided training
+let _wakeLock=null, _wantWake=false;
+async function acquireWake(){
+  _wantWake=true;
+  try{ if('wakeLock' in navigator){ _wakeLock=await navigator.wakeLock.request('screen'); _wakeLock.addEventListener('release',()=>{_wakeLock=null;}); } }catch(e){}
+}
+function releaseWake(){ _wantWake=false; try{ if(_wakeLock){ _wakeLock.release(); _wakeLock=null; } }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(_wantWake && document.visibilityState==='visible' && !_wakeLock) acquireWake(); });
+
 let player={steps:[],idx:0,remaining:0,timer:null,paused:false,onDone:null};
 function startGuide(steps,onDone){
   player={steps:steps.slice(),idx:0,remaining:0,timer:null,paused:false,onDone};
   document.getElementById('ringFg').style.strokeDasharray=RING_CIRC;
   document.getElementById('player').classList.add('show');
   document.getElementById('pPause').textContent='Pause';
+  acquireWake();
   loadStep();
   document.getElementById('pPause').onclick=togglePause;
   document.getElementById('pSkip').onclick=()=>nextStep();
@@ -1156,13 +1221,14 @@ function togglePause(){player.paused=!player.paused;document.getElementById('pPa
 function nextStep(){player.idx++;if(player.idx>=player.steps.length){finishGuide();}else{loadStep();}}
 function finishGuide(){
   clearInterval(player.timer);
+  releaseWake();
   const ov=document.getElementById('player');
   const cb=player.onDone;
   ov.classList.remove('show');
   if(cb)cb();
   toast('✓ Quest complete — nice work');
 }
-function quitGuide(){clearInterval(player.timer);document.getElementById('player').classList.remove('show');}
+function quitGuide(){clearInterval(player.timer);releaseWake();document.getElementById('player').classList.remove('show');}
 
 //================= MIND ENGINE (content + spaced repetition) =================
 const SUBJECTS=[{key:'tech',name:'Science & Tech',icon:'🔬'},{key:'psych',name:'Psychology',icon:'🧠'}];
@@ -1228,7 +1294,120 @@ const REFLECTS=[
  {subj:'psych',prompt:"When did you last let System 1 answer a question that deserved System 2?"},
  {subj:'tech',prompt:"What's a small daily edge that compounds invisibly over a whole year?"},
 ];
-function conceptById(id){return CONCEPTS.find(c=>c.id===id);}
+function allConcepts(){return CONCEPTS.concat(S.mind.generated||[]);}
+function conceptById(id){return allConcepts().find(c=>c.id===id);}
+
+//================= LIVE AI TUTOR (backend) =================
+function backendOn(){return !!(S.backend && S.backend.url && S.backend.key);}
+async function backendCall(path,payload){
+  if(!backendOn()) throw {kind:'noconfig'};
+  let r;
+  try{ r=await fetch(S.backend.url.replace(/\/+$/,'')+path,{method:'POST',headers:{'Content-Type':'application/json','X-Access-Key':S.backend.key},body:JSON.stringify(payload)}); }
+  catch(e){ throw {kind:'network'}; }
+  let data; try{ data=await r.json(); }catch(e){ throw {kind:'badresp'}; }
+  if(r.status===429) throw {kind:'limit',message:(data&&data.message)||'Daily AI limit reached.'};
+  if(r.status===401) throw {kind:'auth'};
+  if(!r.ok || data.error) throw {kind:'api',message:(data&&data.message)||'AI error'};
+  return data;
+}
+function aiErrMsg(e){
+  if(!e||e.kind==='network') return "Couldn't reach the tutor — check your connection, or the offline lessons still work.";
+  if(e.kind==='noconfig') return "Set up the AI tutor first (⚙ AI settings).";
+  if(e.kind==='auth') return "Access key rejected — re-check it in ⚙ AI settings.";
+  if(e.kind==='limit') return e.message||"Daily AI limit reached — resets tomorrow.";
+  if(e.kind==='badresp') return "The tutor sent something unexpected — try again.";
+  return e.message||"Something went wrong — try again.";
+}
+function modalLoading(msg){
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="aiload"><div class="aispin"></div><div class="aimsg">${esc(msg)}</div></div>`;
+  document.getElementById('modalBack').classList.add('show');
+}
+async function generateLesson(){
+  const topic=val('genTopic'); const track=document.getElementById('genTrack').value;
+  if(!topic){toast('Type a topic first');return;}
+  if(!backendOn()){openAISettings();return;}
+  modalLoading('Writing your lesson… (a few seconds)');
+  try{
+    const res=await backendCall('/lesson',{topic,track});
+    const d=res.data;
+    if(!d||!d.lesson) throw {kind:'badresp'};
+    const concept={id:'gen_'+Math.random().toString(36).slice(2,8),subject:track,title:(d.title||topic).slice(0,80),lesson:d.lesson,questions:Array.isArray(d.questions)?d.questions.slice(0,2):[],generated:true,created:today()};
+    S.mind.generated.push(concept); save();
+    openLesson(concept.id);
+    renderHud();
+  }catch(e){
+    document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Couldn't generate</div><div class="lesson">${esc(aiErrMsg(e))}</div><div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+    document.getElementById('qClose').onclick=closeModal;
+  }
+}
+let writeState=null;
+function openWrite(id){
+  const c=conceptById(id);if(!c)return;
+  let q;
+  if(c.questions&&c.questions.length) q=c.questions[Math.floor(Math.random()*c.questions.length)];
+  else q="In your own words, explain "+c.title+" — and give a concrete example.";
+  writeState={c,q};
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · write</div>
+    <div class="qtext">${esc(q)}</div>
+    <textarea id="wAns" placeholder="Answer in your own words…" style="margin-top:10px;min-height:120px"></textarea>
+    <div class="field" style="margin-top:10px"><button class="btn block" id="wSubmit">✍️ Submit for grading</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('wSubmit').onclick=submitWrite;
+}
+async function submitWrite(){
+  const {c,q}=writeState; const ans=document.getElementById('wAns').value.trim();
+  if(ans.length<3){toast('Write a bit more first');return;}
+  modalLoading('Grading your answer…');
+  try{
+    const res=await backendCall('/grade',{concept:c.title+' — '+c.lesson,question:q,answer:ans});
+    const g=res.data||{};
+    const score=Math.max(0,Math.min(100,parseInt(g.score)||0));
+    const pass=score>=70, partial=score>=40&&score<70;
+    const isReview=!!S.mind.srs[c.id];
+    scheduleSRS(c.id,pass);
+    const mp=isReview?(pass?12:partial?8:4):(pass?30:partial?18:10);
+    S.mind.mp+=mp; S.mind.subj[c.subject]=(S.mind.subj[c.subject]||0)+mp; awardXp(0); save();
+    const verdict=pass?'✓ Solid understanding':partial?'~ Partly there':'✗ Not yet';
+    const missed=(Array.isArray(g.missed)&&g.missed.length)?`<div class="fbex"><b>To sharpen:</b> ${esc(g.missed.map(x=>String(x)).join(' · '))}</div>`:'';
+    const nextDue=S.mind.srs[c.id].due-dayNum();
+    document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · graded</div>
+      <div class="mname">${score}/100 <span style="font-size:13px;color:var(--muted)">${verdict}</span></div>
+      <div class="scorebar"><i style="width:${score}%;background:${pass?'var(--green)':partial?'var(--gold)':'var(--red)'}"></i></div>
+      <div class="fbex" style="margin-top:12px">${esc(g.feedback||'')}</div>${missed}
+      <div class="reward-box" style="margin-top:12px"><div class="rl">+${mp} MP · ${esc(subjName(c.subject))}</div><div class="rt">${pass?`Locked in. Next review in ${nextDue} day${nextDue===1?'':'s'}.`:'Review scheduled soon — another pass will cement it.'}</div></div>
+      <div class="field" style="margin-top:10px"><button class="btn block" id="wAgain">Try another answer</button></div>
+      <div class="field"><button class="btn ghost sm" id="qClose">Done</button></div>`;
+    document.getElementById('qClose').onclick=()=>{closeModal();renderHud();renderView();};
+    document.getElementById('wAgain').onclick=()=>openWrite(c.id);
+  }catch(e){
+    document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Couldn't grade</div><div class="lesson">${esc(aiErrMsg(e))}</div><div class="field" style="margin-top:12px"><button class="btn block" id="wRetry">Try again</button></div><div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+    document.getElementById('qClose').onclick=closeModal;
+    document.getElementById('wRetry').onclick=()=>openWrite(writeState.c.id);
+  }
+}
+function openAISettings(){
+  const b=S.backend||{url:'',key:''};
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">⚙ AI tutor settings</div>
+    <div class="lesson" style="font-size:13px">Paste your Cloudflare Worker URL and access key. These stay on this device only — never uploaded, never in the app's code. Leave blank to use offline lessons only.</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:12px">Worker URL</div><input id="beUrl" placeholder="https://lifequest-tutor.NAME.workers.dev" value="${esc(b.url||'')}" style="width:100%;margin-top:4px">
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">Access key</div><input id="beKey" placeholder="your ACCESS_KEY" value="${esc(b.key||'')}" style="width:100%;margin-top:4px">
+    <div class="field" style="margin-top:12px"><button class="btn block" id="beTest">Save &amp; test</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>
+    <div id="beStatus" class="hint"></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('beTest').onclick=async()=>{
+    S.backend={url:val('beUrl').trim(),key:val('beKey').trim()}; save();
+    const st=document.getElementById('beStatus');
+    if(!backendOn()){st.textContent='Saved (offline mode — both fields needed for live tutor).';renderView();return;}
+    st.textContent='Testing…';
+    try{ await backendCall('/lesson',{topic:'connection test: reply with one short sentence about focus',track:'psych'}); st.innerHTML='<span style="color:var(--green)">✓ Connected — live tutor is on.</span>'; setTimeout(()=>{closeModal();renderView();},900);}
+    catch(e){ st.innerHTML='<span style="color:var(--red)">'+esc(aiErrMsg(e))+'</span>'; }
+  };
+}
+
 function mindLevel(xp){const per=100;return{lvl:Math.floor(xp/per)+1,into:xp%per,per,pct:Math.round((xp%per)/per*100)};}
 const BOX_DAYS=[0,1,3,7,16,35];
 function dayNum(){return Math.floor(Date.now()/864e5);}
@@ -1247,25 +1426,36 @@ let testState=null;
 function openLesson(id){
   const c=conceptById(id);if(!c)return;
   const mb=document.getElementById('modalBody');
-  mb.innerHTML=`<div class="grab"></div><div class="mlbl">${esc(subjName(c.subject))} · lesson</div><div class="mname">${esc(c.title)}</div>
+  const hasMC=c.quiz&&c.quiz.length;
+  const tag=c.generated?'<span class="genbadge">✨ AI lesson</span>':'';
+  let btns='';
+  if(hasMC) btns+=`<div class="field" style="margin-top:14px"><button class="btn block" id="toTest">Start quiz (multiple choice) →</button></div>`;
+  if(backendOn()) btns+=`<div class="field"${hasMC?'':' style="margin-top:14px"'}><button class="btn block" id="toWrite">✍️ Write your answer →</button></div>`;
+  if(!hasMC&&!backendOn()) btns+=`<div class="hint" style="margin-top:12px">Turn on the AI tutor (⚙ in Mind) to be tested on this lesson.</div>`;
+  mb.innerHTML=`<div class="grab"></div><div class="mlbl">${esc(subjName(c.subject))} · lesson ${tag}</div><div class="mname">${esc(c.title)}</div>
     <div class="lesson">${esc(c.lesson)}</div>
-    <div class="field" style="margin-top:14px"><button class="btn block" id="toTest">Start test →</button></div>
+    ${btns}
     <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
-  document.getElementById('toTest').onclick=()=>startTest(id,false);
+  const tt=document.getElementById('toTest'); if(tt)tt.onclick=()=>startTest(id,false);
+  const tw=document.getElementById('toWrite'); if(tw)tw.onclick=()=>openWrite(id);
 }
 function startTest(id,isReview){const c=conceptById(id);if(!c)return;testState={c,qi:0,score:0,isReview};document.getElementById('modalBack').classList.add('show');renderQuestion();}
 function renderQuestion(){
   const {c,qi}=testState; const q=c.quiz[qi];
+  // build a shuffled display order of original option indices (Fisher-Yates)
+  const order=q.options.map((_,i)=>i);
+  for(let k=order.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[order[k],order[j]]=[order[j],order[k]];}
+  testState.order=order;
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · Q${qi+1}/${c.quiz.length}</div>
-    <div class="qtext">${esc(q.q)}</div><div id="opts">${q.options.map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join('')}</div><div id="qfb"></div>`;
+    <div class="qtext">${esc(q.q)}</div><div id="opts">${order.map(orig=>`<button class="opt" data-i="${orig}">${esc(q.options[orig])}</button>`).join('')}</div><div id="qfb"></div>`;
   document.querySelectorAll('#opts .opt').forEach(b=>b.onclick=()=>answerQ(parseInt(b.dataset.i)));
 }
 function answerQ(i){
   const {c,qi}=testState; const q=c.quiz[qi]; const correct=i===q.answer;
   if(correct)testState.score++;
-  document.querySelectorAll('#opts .opt').forEach((b,idx)=>{b.disabled=true;if(idx===q.answer)b.classList.add('right');else if(idx===i)b.classList.add('wrong');});
+  document.querySelectorAll('#opts .opt').forEach(b=>{const orig=parseInt(b.dataset.i);b.disabled=true;if(orig===q.answer)b.classList.add('right');else if(orig===i)b.classList.add('wrong');});
   const last=qi>=c.quiz.length-1;
   document.getElementById('qfb').innerHTML=`<div class="fb ${correct?'fbok':'fbno'}">${correct?'✓ Correct':'✗ Not quite'}</div><div class="fbex">${esc(q.explain)}</div><div class="field" style="margin-top:12px"><button class="btn block" id="qnext">${last?'See result':'Next question →'}</button></div>`;
   document.getElementById('qnext').onclick=()=>{if(last)finishTest();else{testState.qi++;renderQuestion();}};
@@ -1297,17 +1487,18 @@ function openReflect(){
 }
 function openBrowse(){
   const list=SUBJECTS.map(s=>{
-    const cs=CONCEPTS.filter(c=>c.subject===s.key);
+    const cs=allConcepts().filter(c=>c.subject===s.key);
     return `<div class="mexs" style="margin-top:12px">${s.icon} ${esc(s.name)}</div>`+cs.map(c=>{
       const st=S.mind.srs[c.id]; const due=st&&st.due<=dayNum();
       const tag=!st?'<span style="color:var(--faint)">new</span>':(due?'<span style="color:var(--gold)">review due</span>':'<span style="color:var(--green)">learned</span>');
-      return `<div class="exrow" data-cid="${c.id}" style="cursor:pointer"><div class="qbody"><div class="nm">${esc(c.title)}</div><div class="sc">${tag}</div></div><span style="color:var(--cyan)">→</span></div>`;
+      const gen=c.generated?' ✨':'';
+      return `<div class="exrow" data-cid="${c.id}" style="cursor:pointer"><div class="qbody"><div class="nm">${esc(c.title)}${gen}</div><div class="sc">${tag}</div></div><span style="color:var(--cyan)">→</span></div>`;
     }).join('');
   }).join('');
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">All concepts</div>${list}<div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
-  document.querySelectorAll('#modalBody .exrow[data-cid]').forEach(el=>el.onclick=()=>{const id=el.dataset.cid;const st=S.mind.srs[id];closeModal();setTimeout(()=>{if(st)startTest(id,true);else openLesson(id);},80);});
+  document.querySelectorAll('#modalBody .exrow[data-cid]').forEach(el=>el.onclick=()=>{const id=el.dataset.cid;const c=conceptById(id);const st=S.mind.srs[id];closeModal();setTimeout(()=>{if(st&&c&&c.quiz&&c.quiz.length)startTest(id,true);else if(st&&backendOn())openWrite(id);else openLesson(id);},80);});
 }
 
 //================= LIBRARY / E-BOOK READER =================
@@ -1523,6 +1714,9 @@ document.getElementById('bookFile').addEventListener('change',ev=>{
   r.onload=()=>{const tx=document.getElementById('bkText');const ti=document.getElementById('bkTitle');if(tx)tx.value=r.result;if(ti&&!ti.value)ti.value=f.name.replace(/\.(txt|md)$/i,'');toast('File loaded — review and Add');};
   r.readAsText(f);ev.target.value='';
 });
+
+// backup restore import
+document.getElementById('backupFile').addEventListener('change',ev=>{const f=ev.target.files[0];if(f)importData(f);ev.target.value='';});
 
 //================= PWA =================
 let deferredPrompt=null;
