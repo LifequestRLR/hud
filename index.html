@@ -936,7 +936,7 @@ function viewMind(){
   <div class="card"><h2>🧠 Mind <span class="n">${m.mp} MP · ${due} due</span></h2>${tracks}
     <div class="hint">Each track levels up as you earn Mind Points. Concepts you pass come back for spaced review — that's what makes knowledge stick.</div></div>
   <div class="card" style="border-color:#473e7a"><h2 style="color:var(--violet)">🧭 Mind Coach <span class="n">study this now</span></h2>${coachHtml}
-    <div class="field" style="margin-top:10px"><button class="btn ghost sm" id="mBrowse">Browse all concepts</button><button class="btn ghost sm" id="mReflect2">💭 Reflect</button></div></div>
+    <div class="field" style="margin-top:10px"><button class="btn ghost sm" id="mBrowse">Browse all concepts</button>${backendOn()?'<button class="btn ghost sm" id="mAiPick">✨ Tutor pick</button>':''}<button class="btn ghost sm" id="mReflect2">💭 Reflect</button></div></div>
   <div class="card" style="border-color:var(--cyan-dim)"><h2 style="color:var(--cyan)">✨ Learn anything <span class="n">${backendOn()?'live tutor on':'tutor off'}</span></h2>
     <div class="info" style="margin:0 0 10px">Type any topic and the tutor writes you a plain-language lesson, then tests you on what you actually understood.</div>
     <input id="genTopic" placeholder="e.g. lactate threshold, loss aversion…" style="width:100%">
@@ -1022,7 +1022,7 @@ const bind={
   mind(){
     add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
     add('mReview',()=>{const p=mindPick();if(p.concept)startTest(p.concept.id,true);});
-    add('mReflect',openReflect); add('mReflect2',openReflect); add('mBrowse',openBrowse);
+    add('mReflect',openReflect); add('mReflect2',openReflect); add('mBrowse',openBrowse); add('mAiPick',aiCoachSuggest);
     document.querySelectorAll('#view .bookrow').forEach(el=>el.onclick=()=>openReader(el.dataset.bid));
     add('addBook',openAddBook);
     add('genBtn',generateLesson);
@@ -1377,6 +1377,21 @@ function modalLoading(msg){
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="aiload"><div class="aispin"></div><div class="aimsg">${esc(msg)}</div></div>`;
   document.getElementById('modalBack').classList.add('show');
 }
+function saveGenerated(d,trackKey,fallbackTitle){
+  const concept={id:'gen_'+Math.random().toString(36).slice(2,8),subject:trackKey,title:(d.title||fallbackTitle||'New concept').slice(0,80),lesson:d.lesson,questions:Array.isArray(d.questions)?d.questions.slice(0,2):[],generated:true,created:today()};
+  S.mind.generated.push(concept); save(); return concept;
+}
+function genErrorModal(e){
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Couldn't generate</div><div class="lesson">${esc(aiErrMsg(e))}</div><div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('qClose').onclick=closeModal;
+}
+function weakestTrack(){
+  const counts={}; SUBJECTS.forEach(s=>counts[s.key]=0);
+  Object.keys(S.mind.srs).forEach(id=>{const c=conceptById(id);if(c&&counts[c.subject]!==undefined)counts[c.subject]++;});
+  const min=Math.min(...SUBJECTS.map(s=>counts[s.key]));
+  const tied=SUBJECTS.filter(s=>counts[s.key]===min);
+  return tied[Math.floor(Math.random()*tied.length)];
+}
 async function generateLesson(){
   const topic=val('genTopic'); const track=document.getElementById('genTrack').value;
   if(!topic){toast('Type a topic first');return;}
@@ -1384,16 +1399,21 @@ async function generateLesson(){
   modalLoading('Writing your lesson… (a few seconds)');
   try{
     const res=await backendCall('/lesson',{topic,track});
-    const d=res.data;
-    if(!d||!d.lesson) throw {kind:'badresp'};
-    const concept={id:'gen_'+Math.random().toString(36).slice(2,8),subject:track,title:(d.title||topic).slice(0,80),lesson:d.lesson,questions:Array.isArray(d.questions)?d.questions.slice(0,2):[],generated:true,created:today()};
-    S.mind.generated.push(concept); save();
-    openLesson(concept.id);
-    renderHud();
-  }catch(e){
-    document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Couldn't generate</div><div class="lesson">${esc(aiErrMsg(e))}</div><div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
-    document.getElementById('qClose').onclick=closeModal;
-  }
+    const d=res.data; if(!d||!d.lesson) throw {kind:'badresp'};
+    const c=saveGenerated(d,track,topic); openLesson(c.id); renderHud();
+  }catch(e){ genErrorModal(e); }
+}
+async function aiCoachSuggest(){
+  if(!backendOn()){openAISettings();return;}
+  const s=weakestTrack();
+  const known=allConcepts().filter(c=>c.subject===s.key).map(c=>c.title);
+  const topic="Choose ONE important, specific concept in "+s.name+" that a curious learner should study next"+(known.length?(", and that is NOT any of these already-covered topics: "+known.join('; ')):"")+". Teach that single concept and put its name as the title.";
+  modalLoading('Finding you a fresh '+s.name+' topic…');
+  try{
+    const res=await backendCall('/lesson',{topic,track:s.key});
+    const d=res.data; if(!d||!d.lesson) throw {kind:'badresp'};
+    const c=saveGenerated(d,s.key,s.name+' concept'); openLesson(c.id); renderHud();
+  }catch(e){ genErrorModal(e); }
 }
 let writeState=null;
 function openWrite(id){
