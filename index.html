@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>LifeQuest</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0a0c12">
@@ -19,7 +19,7 @@
     --glow-gold:0 0 18px rgba(245,196,81,.45);
     --z-rec:#8a93ad;--z-z2:#5fd08a;--z-tempo:#f0974a;--z-max:#ef5f6b;}
   *{box-sizing:border-box;margin:0;padding:0}
-  html{height:100%;background:#0a0c12;overscroll-behavior-y:none}
+  html{height:100%;background:#0a0c12;overscroll-behavior-y:none;touch-action:manipulation}
   body{font-family:'Sora',system-ui,sans-serif;color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;
     background:radial-gradient(1100px 600px at 78% -8%,rgba(70,214,200,.10),transparent 60%),radial-gradient(900px 600px at 8% 6%,rgba(245,196,81,.08),transparent 55%),linear-gradient(180deg,#0a0c12,#0a0c12 40%,#080a0f);}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
@@ -921,7 +921,7 @@ function viewMind(){
   const tracks=SUBJECTS.map(s=>{
     const xp=m.subj[s.key]||0; const L=mindLevel(xp);
     const learned=Object.keys(m.srs).filter(id=>{const c=conceptById(id);return c&&c.subject===s.key;}).length;
-    const total=CONCEPTS.filter(c=>c.subject===s.key).length;
+    const total=allConcepts().filter(c=>c.subject===s.key).length;
     return `<div class="mtrack"><div class="trow"><span class="tic">${s.icon}</span><span class="tname">${s.name}</span><span class="tlvl">Lv ${L.lvl}</span></div><div class="tbar"><i style="width:${L.pct}%"></i></div><div class="tmeta">${L.into}/${L.per} MP → Lv ${L.lvl+1} · ${learned}/${total} concepts learned</div></div>`;
   }).join('');
   const pick=mindPick();
@@ -1231,7 +1231,7 @@ function finishGuide(){
 function quitGuide(){clearInterval(player.timer);releaseWake();document.getElementById('player').classList.remove('show');}
 
 //================= MIND ENGINE (content + spaced repetition) =================
-const SUBJECTS=[{key:'tech',name:'Science & Tech',icon:'🔬'},{key:'psych',name:'Psychology',icon:'🧠'}];
+const SUBJECTS=[{key:'tech',name:'Science & Tech',icon:'🔬'},{key:'sportsci',name:'Sport Science',icon:'🏃'},{key:'psych',name:'Psychology',icon:'🧠'},{key:'ai',name:'AI',icon:'🤖'},{key:'eng',name:'Engineering',icon:'⚙️'},{key:'econ',name:'Economics',icon:'💹'},{key:'strategy',name:'Strategy',icon:'♟️'}];
 function subjName(k){const s=SUBJECTS.find(x=>x.key===k);return s?s.name:'Open';}
 const CONCEPTS=[
  {id:'thermo1',subject:'tech',title:'First Law of Thermodynamics',
@@ -1284,6 +1284,61 @@ const CONCEPTS=[
   quiz:[
    {q:"Why does spaced practice beat cramming for long-term recall?",options:["Retrieving as a memory fades strengthens it most","It's simply more enjoyable","It uses System 1","Cramming damages the brain"],answer:0,explain:"Effortful retrieval at spacing intervals consolidates memory durably."},
    {q:"Cramming often feels more effective because…",options:["It creates a false sense of fluency in the moment","It actually is more effective","It uses spacing","It's harder than spacing"],answer:0,explain:"Immediate fluency misleads; lasting retention needs spaced retrieval."}]},
+ {id:'ss_lactate',subject:'sportsci',title:'Lactate threshold',
+  lesson:`Your lactate threshold is the intensity where lactate floods in faster than your body can clear it — above it, acidity builds, your muscles burn, and you fade. Lactate itself isn't a poison; it's reusable fuel. The threshold sits at a percentage of your max (yours is around HR 174). Train just below it and you raise the ceiling. The higher your threshold sits under your max heart rate, the longer you can hold a hard pace before gassing — which is why it's the single most trainable predictor of endurance.`,
+  quiz:[
+   {q:"Why do you 'gas out' above your lactate threshold?",options:["Acidity builds faster than you can clear it","Your muscles run out of lactate","Your heart stops pumping","You run out of oxygen completely"],answer:0,explain:"Above threshold, hydrogen ions accumulate faster than removal, cutting force output."},
+   {q:"The best way to raise your lactate threshold is…",options:["Sustained work just below it","Only all-out sprints","Complete rest","Eating more sugar"],answer:0,explain:"Tempo/threshold work trains the body to clear and tolerate lactate, lifting the ceiling."}]},
+ {id:'ss_vo2',subject:'sportsci',title:'VO2max — the size of your engine',
+  lesson:`VO2max is the most oxygen your body can use per minute — the size of your aerobic engine. Yours is 54, which is strong. A bigger engine isn't just about going fast in a straight line; for a fighter it means faster recovery between explosive efforts, so you're fresher for the next scramble. It's built by large volumes of easy aerobic work plus some high-intensity intervals. It's partly genetic, but very trainable — and it's the foundation everything else sits on.`,
+  quiz:[
+   {q:"For a fighter, the biggest practical benefit of a high VO2max is…",options:["Faster recovery between explosive efforts","Bigger muscles","Lower body fat","A slow resting heart rate only"],answer:0,explain:"A bigger aerobic engine refills you between bursts, so you fade less in late rounds."},
+   {q:"VO2max is mainly built by…",options:["Lots of easy aerobic work plus some intervals","Only lifting heavy","Stretching daily","Cutting calories"],answer:0,explain:"Aerobic volume grows the engine; intervals push its ceiling."}]},
+ {id:'ss_super',subject:'sportsci',title:'Supercompensation & recovery',
+  lesson:`You don't get fitter during training — you get fitter during recovery. Hard work breaks you down; with rest, food and sleep your body rebuilds slightly stronger than before. That overshoot is supercompensation. Train again at the right moment and you climb; train too hard too soon, again and again, and you dig a fatigue hole — overtraining. It's why rest days and sleep aren't slacking: they're when the adaptation actually happens.`,
+  quiz:[
+   {q:"When do you actually get stronger and fitter?",options:["During recovery after training","During the workout itself","Only while warming up","While cutting weight"],answer:0,explain:"Training is the stimulus; the adaptation happens while you recover."},
+   {q:"Training hard again too soon, repeatedly, leads to…",options:["Digging a fatigue hole (overtraining)","Faster gains every time","No effect at all","Instant supercompensation"],answer:0,explain:"Without enough recovery the rebuild never completes and fatigue piles up."}]},
+ {id:'ai_attention',subject:'ai',title:'Attention & the transformer',
+  lesson:`Modern AI language models run on a trick called "attention." Instead of reading word by word in isolation, the model weighs how much every word should pay attention to every other word — so "bank" next to "river" means something different than next to "money." Stacking many attention layers lets it build a rich sense of meaning. This is the core idea behind the transformer, the architecture under almost every modern AI, including the tutor inside this app.`,
+  quiz:[
+   {q:"What does 'attention' let an AI model do?",options:["Weigh how words relate to each other in context","Pay a subscription fee","Run without electricity","Store the internet word-for-word"],answer:0,explain:"Attention scores how much each token should consider every other — capturing context."},
+   {q:"The architecture built on attention is called…",options:["The transformer","The calculator","The spreadsheet","The compiler"],answer:0,explain:"Transformers, introduced in 2017, underpin modern language models."}]},
+ {id:'ai_llm',subject:'ai',title:'What an LLM actually does',
+  lesson:`A large language model, at its core, does one humble thing: predict the next chunk of text given everything so far. Trained on vast amounts of writing, it learns patterns so well that good next-word prediction produces reasoning, translation and code. It doesn't "look things up" — it generates plausible continuations, which is why it can be fluent and confident yet wrong (a "hallucination"). Understanding this demystifies it: it's an extraordinary pattern-completer, not a database of facts.`,
+  quiz:[
+   {q:"At its core, a language model is…",options:["Predicting the next chunk of text","Searching a database of facts","Copying answers from Google","Running a human brain"],answer:0,explain:"It generates likely continuations from patterns it learned in training."},
+   {q:"Why can an LLM sound confident but be wrong?",options:["It generates plausible text, not verified facts","It lies on purpose","It ran out of memory","It only works offline"],answer:0,explain:"Fluency comes from pattern completion, which can produce confident falsehoods."}]},
+ {id:'eng_safety',subject:'eng',title:'Factor of safety',
+  lesson:`Engineers never build something to handle exactly the load they expect — they build it to handle far more. The factor of safety is how much stronger a structure is than it strictly needs to be: a cable rated for 1,000 kg might be built to hold 5,000. That margin absorbs the unknowns — flawed materials, surprise loads, wear, human error. Bigger safety factors cost more but fail less often. It's risk management made physical.`,
+  quiz:[
+   {q:"Why design a cable to hold far more than its expected load?",options:["To absorb unknowns — flaws, surprises, wear","To waste money","Because heavier is always better","To make it look strong"],answer:0,explain:"The safety factor covers uncertainty and variation so it doesn't fail."},
+   {q:"A larger factor of safety generally means…",options:["More cost but less chance of failure","Cheaper and weaker","No difference","Faster to build"],answer:0,explain:"More margin uses more material but reduces the risk of failure."}]},
+ {id:'eng_tradeoff',subject:'eng',title:'Constraints & trade-offs',
+  lesson:`Engineering is the art of the trade-off. You almost never get strong AND light AND cheap AND fast all at once — push one and another gives. A racing bike is light and fast but fragile and pricey; a cargo bike is the opposite. Good engineering isn't finding a magic option with no downsides; it's choosing which downsides you can live with for the job at hand. Every real design is a negotiation between competing constraints.`,
+  quiz:[
+   {q:"The essence of engineering design is…",options:["Choosing which trade-offs to accept","Finding options with zero downsides","Always picking the cheapest","Ignoring the constraints"],answer:0,explain:"Strong, light, cheap and fast rarely coexist — you pick your compromises."},
+   {q:"A light, fast racing bike is usually also…",options:["More fragile and expensive","Cheaper and tougher","Heavier","Identical to a cargo bike"],answer:0,explain:"Optimizing for light and fast trades away durability and cost."}]},
+ {id:'econ_oppcost',subject:'econ',title:'Opportunity cost',
+  lesson:`The real cost of anything isn't the money or time you spend — it's the best thing you gave up to get it. An hour training is an hour not resting, working or seeing friends; the opportunity cost is whichever of those mattered most. Money has it too: €1,000 spent is €1,000 not saved or invested. Thinking in opportunity cost stops you judging choices in isolation and forces the real question — compared to what?`,
+  quiz:[
+   {q:"The opportunity cost of a choice is…",options:["The best alternative you gave up","The cash you paid","Always zero","The tax on it"],answer:0,explain:"It's the value of the next-best option foregone, not just the price."},
+   {q:"Spending €1,000 on a gadget has an opportunity cost of…",options:["What that €1,000 could have done instead","Nothing, it's yours","Only the sales tax","€1,000 plus shipping"],answer:0,explain:"That money can't also be saved, invested or spent elsewhere — that's the cost."}]},
+ {id:'econ_incentive',subject:'econ',title:'Incentives',
+  lesson:`People respond to incentives — the rewards and penalties built into a situation — often more than to instructions or good intentions. Change the incentive and behavior follows, sometimes in ways nobody intended. Pay surgeons per operation and you get more operations; fine parents for late daycare pickup and lateness can actually rise, because the fine becomes a price they'll happily pay. Most economic and social puzzles dissolve once you ask: what is this setup actually rewarding?`,
+  quiz:[
+   {q:"Economics says behavior is driven most by…",options:["The incentives people actually face","Good intentions alone","Random chance","Government speeches"],answer:0,explain:"People respond to the real rewards and penalties in front of them."},
+   {q:"Fining parents for late pickup sometimes increases lateness because…",options:["The fine becomes a price they'll pay","Parents get faster","It never has any effect","The clocks change"],answer:0,explain:"A penalty reframed as a price can remove the moral pressure — an unintended incentive."}]},
+ {id:'strat_kernel',subject:'strategy',title:'Good strategy vs a wish',
+  lesson:`Most "strategies" are just goals dressed up — "be the market leader," "win the title." That's a wish, not a strategy. A real strategy has a kernel: an honest diagnosis of the core problem, a guiding policy for tackling it, and coherent actions that actually follow. "Get fitter" is a wish. "My limiter is late-round gassing, so I'll prioritise the aerobic base, with these three weekly sessions" is a strategy — it names the problem and commits to a coherent response.`,
+  quiz:[
+   {q:"What separates a real strategy from a wish?",options:["A diagnosis, a guiding policy and coherent actions","Bold ambition","A motivational slogan","Wanting it badly enough"],answer:0,explain:"The kernel: diagnose the problem, set a policy, take coherent action."},
+   {q:"'Become the champion' is, by itself…",options:["A goal, not a strategy","A complete strategy","A diagnosis","A guiding policy"],answer:0,explain:"It states an outcome without the how — a wish until backed by a real plan."}]},
+ {id:'strat_moat',subject:'strategy',title:'Competitive advantage (moats)',
+  lesson:`A competitive advantage is something that lets you win and that rivals can't easily copy — a "moat." For a business it might be a brand, a network, or a cost nobody can match. For a fighter the logic is identical: your edge is whatever's hard to replicate — a freakish gas tank, an awkward style, fight IQ. Strategy is about finding, building and defending the few advantages that are genuinely yours, rather than competing where everyone is equal.`,
+  quiz:[
+   {q:"A 'moat' in strategy is…",options:["An advantage rivals can't easily copy","A water feature","A marketing budget","A lucky streak"],answer:0,explain:"Durable, hard-to-replicate advantage is what protects a position."},
+   {q:"The smart place to compete is…",options:["Where you have a hard-to-copy edge","Wherever everyone else is equal","Only on price","Anywhere at random"],answer:0,explain:"Strategy leans into defensible advantages rather than even fights."}]},
 ];
 const REFLECTS=[
  {subj:'tech',prompt:"If an AI could perfectly predict your next decision, would the decision still be yours?"},
