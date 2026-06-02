@@ -479,7 +479,7 @@ async function load(){
   if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
   S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
       S.backend=S.backend||{url:'',key:''};
-  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[];
+  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();});
   rolloverDay(); booted=true; renderAll();
 }
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S,(k,v)=>k.charAt(0)==='_'?undefined:v)),250);}
@@ -504,7 +504,7 @@ function importData(file){
       save();
       S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
       S.backend=S.backend||{url:'',key:''};
-      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[];
+      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();});
       renderAll();
       toast('✓ Backup restored');
     }catch(e){toast('Not a valid backup file');}
@@ -868,7 +868,7 @@ async function addTx(){
     } else { cat='other'; }
   }
   const c=catBy(cat); const amt=(c.type==='in')?Math.abs(a):-Math.abs(a);
-  S.ledger.push({day:today(),desc:d||c.label,amt,cat});
+  S.ledger.push({id:id(),day:today(),desc:d||c.label,amt,cat});
   S.balance=Math.round((S.balance+amt)*100)/100;
   save(); renderView();
   toast(`${amt>=0?'+':'−'}€${fmt(Math.abs(amt))} · ${c.label}`);
@@ -961,6 +961,27 @@ function parseBankCSV(text){
   return {bank:fmt.bank,rows:out};
 }
 let importStaged=null;
+function openTxEdit(tid){
+  const t=S.ledger.find(x=>x.id===tid); if(!t)return;
+  const opts=CATS.filter(c=>c.type!=='in'||t.amt>=0).map(c=>`<option value="${c.k}"${t.cat===c.k?' selected':''}>${c.ic} ${c.label}</option>`).join('')+`<option value="transfer"${t.cat==='transfer'?' selected':''}>🔄 Transfer (won't count as spending)</option>`;
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Edit transaction</div>
+    <div class="mname" style="font-size:17px">${esc(t.desc||'')}</div>
+    <div class="hint" style="margin:2px 0 12px">${t.day} · <span class="${t.amt>=0?'':''}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</span></div>
+    <div style="font-size:11px;color:var(--muted)">Category</div>
+    <select id="txeCat" style="width:100%;margin-top:4px">${opts}</select>
+    <div class="field" style="margin-top:12px"><button class="btn block" id="txeSave">Save category</button></div>
+    <div class="field"><button class="btn ghost sm" id="txeDel" style="color:var(--red)">🗑 Delete transaction</button><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('txeSave').onclick=()=>{t.cat=document.getElementById('txeCat').value;save();closeModal();renderView();toast('Category updated');};
+  let armed=false;
+  document.getElementById('txeDel').onclick=function(){
+    if(!armed){armed=true;this.textContent='⚠ Tap again to delete';return;}
+    const i=S.ledger.findIndex(x=>x.id===tid);
+    if(i>=0){ S.balance=Math.round((S.balance-S.ledger[i].amt)*100)/100; S.ledger.splice(i,1); save(); }
+    closeModal(); renderHud(); renderView(); toast('Transaction deleted');
+  };
+}
 function openImport(){
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">📥 Import bank statement</div>
     <div class="lesson" style="font-size:13px">Export a CSV from ING (checkings) or Belfius (savings) and pick it here. It's read on your device only — never uploaded. Transfers between your own two accounts are detected and won't count as spending.</div>
@@ -1006,7 +1027,7 @@ function commitImport(){
   let net=0, savNet=0;
   s.rows.forEach(r=>{
     const dest = s.acct==='perrow' ? (r.acct||'daily') : s.acct;
-    if(dest==='daily'){ S.ledger.push({day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); net+=r.amt; }
+    if(dest==='daily'){ S.ledger.push({id:id(),day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); net+=r.amt; }
     else { S.savings.log.push({day:r.day,amt:r.amt}); savNet+=r.amt; }
   });
   if(net) S.balance=Math.round((S.balance+net)*100)/100;
@@ -1066,7 +1087,7 @@ function viewGold(){
     ${m.leak&&m.leak.amt>0?`<div class="leakflag">💸 Biggest leak: <b>${esc(m.leak.label)}</b> — €${fmt(m.leak.amt)} this month.</div>`:''}
   </div>`;
   const cats=(backendOn()?`<option value="auto">✨ Auto-categorize</option>`:'')+CATS.map(c=>`<option value="${c.k}">${c.ic} ${c.label}</option>`).join('');
-  const rows=S.ledger.slice().reverse().slice(0,30).map(t=>{const c=catBy(t.cat);return `<div class="lrow"><span class="lic">${c.ic}</span><div class="lbody"><div class="ld">${esc(t.desc||c.label)}</div><div class="ldt">${t.day} · ${esc(c.label)}</div></div><div class="lamt ${t.amt>=0?'pos':'neg'}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</div></div>`;}).join('')||'<div class="empty">No transactions yet.</div>';
+  const rows=S.ledger.slice().reverse().slice(0,30).map(t=>{const c=catBy(t.cat);return `<div class="lrow" data-tid="${t.id}" style="cursor:pointer"><span class="lic">${c.ic}</span><div class="lbody"><div class="ld">${esc(t.desc||c.label)}</div><div class="ldt">${t.day} · ${esc(c.label)} · edit</div></div><div class="lamt ${t.amt>=0?'pos':'neg'}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</div></div>`;}).join('')||'<div class="empty">No transactions yet.</div>';
   const add=`<div class="card"><h2>➕ Log Transaction <span class="n">Daily €${fmt(S.balance)}</span></h2>
     <div class="field"><input id="txDesc" class="grow" placeholder="What was it?"><input id="txAmt" type="number" step="0.01" placeholder="€" style="width:88px"></div>
     <div class="field"><select id="txCat" class="grow">${cats}</select><button class="btn" id="txAdd">Add</button></div>
@@ -1181,6 +1202,7 @@ const bind={
     const eb=document.getElementById('editBal'); if(eb)eb.onclick=openBalanceEdit;
     add('aiCoachBtn',aiMoneyCoach);
     add('impOpen',openImport);
+    document.querySelectorAll('#view .lrow[data-tid]').forEach(el=>el.onclick=()=>openTxEdit(el.dataset.tid));
   },
   mind(){
     add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
