@@ -356,7 +356,6 @@
     <div class="reader-nav"><button class="rnav" id="rPrev">‹ Prev</button><span class="rpnum" id="rPageNum"></span><button class="rnav" id="rNext">Next ›</button></div>
   </div>
 </div>
-<input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
 <input type="file" id="backupFile" accept="application/json,.json" style="display:none">
 <input type="file" id="bookFile" accept=".txt,.md,text/plain" style="display:none">
 <input type="file" id="icsInput" accept=".ics" style="display:none">
@@ -797,7 +796,7 @@ const CATS=[
  {k:'shopping',ic:'🛍️',label:'Shopping',type:'out',disc:true},
  {k:'other',ic:'📦',label:'Other',type:'out'},
 ];
-function catBy(k){return CATS.find(c=>c.k===k)||(k==='savings'?{k:'savings',ic:'🏦',label:'Savings'}:k==='transfer'?{k:'transfer',ic:'🔄',label:'Transfer'}:{k:'other',ic:'📦',label:'Other',type:'out'});}
+function catBy(k){return CATS.find(c=>c.k===k)||(k==='savings'?{k:'savings',ic:'🏦',label:'Savings'}:{k:'other',ic:'📦',label:'Other',type:'out'});}
 function monthKey(off){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-(off||0));return d.toISOString().slice(0,7);}
 function monthName(){return new Date().toLocaleDateString([],{month:'long'});}
 function monthStats(off){
@@ -805,7 +804,6 @@ function monthStats(off){
   const txns=S.ledger.filter(t=>(t.day||'').slice(0,7)===key);
   let income=0,spending=0; const byCat={};
   txns.forEach(t=>{const c=t.cat||'other';
-    if(c==='transfer')return;
     if(c==='income')income+=t.amt;
     else {spending+=-t.amt; byCat[c]=(byCat[c]||0)+(-t.amt);}});
   const savLog=(S.savings.log||[]).filter(l=>(l.day||'').slice(0,7)===key);
@@ -892,129 +890,6 @@ function transfer(dir){
     toast(`€${fmt(amt)} → Daily`);
   }
 }
-// ===== CSV BANK IMPORT (ING checkings + Belfius savings) =====
-const MY_IBANS=['BE63363088926408','BE8806371616 1341'.replace(/\s/g,'')];
-const CATRULES=[
-  {cat:'food',words:['colruyt','delhaize','carrefour','okay','aldi','lidl','spar','albert heijn','ah ','jumbo','intermarche','match','cru ','bakker','slagerij','night shop','nachtwinkel']},
-  {cat:'eatingout',words:['takeaway','deliveroo','uber eats','ubereats','mcdonald','burger king','quick','frituur','friterie','pizza','kebab','restaurant','resto','starbucks','panos','exki','subway']},
-  {cat:'transport',words:['esso','shell','q8','total','texaco','lukoil','nmbs','sncb','de lijn','mivb','stib','tec ','uber','bolt','parking','tankstation','total energies','dats']},
-  {cat:'fun',words:['weezevent','ticketing','ticketmaster','extrema','tomorrowland','cinema','kinepolis','pathe','cafe','bar ','pub','club','festival','event','voodoo']},
-  {cat:'shopping',words:['bol.com','bol com','coolblue','amazon','zalando','mediamarkt','krefel','decathlon','action','hema','jbc','zara','h&m','primark','asos','apple','torfs']},
-  {cat:'bills',words:['proximus','telenet','orange','base','luminus','engie','mega','water','huur','rent','verzekering','insurance','belasting','gsm','internet','netflix','spotify','disney','claude.ai','openai','subscription','abonnement']},
-  {cat:'gym',words:['basic fit','basic-fit','jims','gym','fitness','mma','141','sportschool','crossfit']},
-];
-function keywordCat(desc){
-  const d=(desc||'').toLowerCase();
-  for(const r of CATRULES){ if(r.words.some(w=>d.includes(w))) return r.cat; }
-  return 'other';
-}
-function parseAmt(s){
-  if(!s)return NaN;
-  s=String(s).trim().replace(/\s/g,'').replace(/\./g,'').replace(',','.');
-  return parseFloat(s);
-}
-function parseDMY(s){ const m=(s||'').trim().match(/(\d{2})\/(\d{2})\/(\d{4})/); return m?`${m[3]}-${m[2]}-${m[1]}`:null; }
-function cleanDesc(raw,party){
-  let d=(party&&party.trim())?party.trim():(raw||'');
-  d=d.replace(/\s+/g,' ').trim();
-  d=d.replace(/REF\.?\s*:.*$/i,'').replace(/KAART(NUMMER)?\s*\d[\dX ]+/i,'').replace(/VAL\.?\s*\d.*$/i,'').trim();
-  return d.slice(0,60)||'Transaction';
-}
-function detectFormat(text){
-  const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
-  for(let i=0;i<Math.min(15,lines.length);i++){
-    if(/^account,date,description,amount,category/i.test(lines[i])) return {bank:'CLEAN',headerLine:i};
-    if(/^Rekeningnummer;/.test(lines[i])) return {bank:'ING',headerLine:i};
-    if(/^Rekening;Boekingsdatum;Rekeninguittrekselnummer/.test(lines[i])) return {bank:'BELFIUS',headerLine:i};
-  }
-  return null;
-}
-function parseBankCSV(text){
-  text=text.replace(/^\uFEFF/,'');
-  const fmt=detectFormat(text); if(!fmt) return {error:'unknown'};
-  const lines=text.split(/\r?\n/).slice(fmt.headerLine+1).filter(l=>l.trim());
-  const out=[];
-  if(fmt.bank==='CLEAN'){
-    for(const line of lines){
-      const c=line.split(',');
-      if(c.length<5) continue;
-      const acct=(c[0]||'').trim().toLowerCase();
-      const date=(c[1]||'').trim();
-      const desc=(c[2]||'').trim()||'Transaction';
-      const amt=parseFloat(c[3]);
-      const cat=(c[4]||'other').trim().toLowerCase();
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(amt)) continue;
-      out.push({day:date,amt:Math.round(amt*100)/100,desc,cat:cat==='transfer'?'transfer':cat,transfer:cat==='transfer',bank:'CLEAN',acct:acct==='sav'?'sav':'daily'});
-    }
-    return {bank:'CLEAN',rows:out,clean:true};
-  }
-  const filtered=lines.filter(l=>/^BE/i.test(l.trim()));
-  for(const line of filtered){
-    const c=line.split(';');
-    let date,amt,desc,counter,rawForCat;
-    if(fmt.bank==='ING'){ date=parseDMY(c[4]); amt=parseAmt(c[6]); desc=cleanDesc(c[8],''); counter=(c[2]||'').replace(/\s/g,''); rawForCat=c[8]||''; }
-    else { date=parseDMY(c[1]); amt=parseAmt(c[10]); desc=cleanDesc(c[8],c[5]); counter=(c[4]||'').replace(/\s/g,''); rawForCat=(c[5]||'')+' '+(c[8]||''); }
-    if(!date||isNaN(amt)) continue;
-    const isTransfer=MY_IBANS.includes(counter)|| /STORTING VAN BE63|NAAR\s+BE88|NAAR\s+BE63/i.test(c.join(' '));
-    out.push({day:date,amt:Math.round(amt*100)/100,desc,cat:amt>=0?'income':keywordCat(rawForCat),transfer:isTransfer,bank:fmt.bank});
-  }
-  return {bank:fmt.bank,rows:out};
-}
-let importStaged=null;
-function openImport(){
-  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">📥 Import bank statement</div>
-    <div class="lesson" style="font-size:13px">Export a CSV from ING (checkings) or Belfius (savings) and pick it here. It's read on your device only — never uploaded. Transfers between your own two accounts are detected and won't count as spending.</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:12px">Import into which account?</div>
-    <select id="impAcct" style="width:100%;margin-top:4px"><option value="auto">Auto-detect (ING→Daily, Belfius→Savings)</option><option value="daily">💳 Daily</option><option value="sav">🏦 Savings</option></select>
-    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px"><input type="checkbox" id="impAll" style="width:auto"> Import full history (otherwise last 90 days)</label>
-    <div class="field" style="margin-top:12px"><button class="btn block" id="impPick">📂 Choose CSV file</button></div>
-    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
-  document.getElementById('modalBack').classList.add('show');
-  document.getElementById('qClose').onclick=closeModal;
-  document.getElementById('impPick').onclick=()=>document.getElementById('csvFile').click();
-}
-function handleCSV(text){
-  const res=parseBankCSV(text);
-  if(res.error||!res.rows){ toast('Unrecognized CSV format'); return; }
-  const all=document.getElementById('impAll')&&document.getElementById('impAll').checked;
-  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-90); const cutS=cutoff.toISOString().slice(0,10);
-  let rows=res.rows.filter(r=>all||r.day>=cutS);
-  const seen=new Set(S.ledger.map(t=>t.day+'|'+t.amt+'|'+(t.desc||'')));
-  const newRows=rows.filter(r=>!seen.has(r.day+'|'+r.amt+'|'+r.desc));
-  const acctSel=document.getElementById('impAcct').value;
-  const acct=res.clean?(acctSel==='auto'?'perrow':acctSel):(acctSel==='auto'?(res.bank==='ING'?'daily':'sav'):acctSel);
-  importStaged={rows:newRows,acct,bank:res.bank,clean:!!res.clean,dupes:rows.length-newRows.length,total:res.rows.length,filtered:res.rows.length-rows.length,all};
-  previewImport();
-}
-function previewImport(){
-  const s=importStaged; const transfers=s.rows.filter(r=>r.transfer).length;
-  const spend=s.rows.filter(r=>!r.transfer&&r.amt<0).reduce((a,r)=>a+(-r.amt),0);
-  const income=s.rows.filter(r=>!r.transfer&&r.amt>0).reduce((a,r)=>a+r.amt,0);
-  const sample=s.rows.slice(0,6).map(r=>`<div class="lrow"><span class="lic">${catBy(r.transfer?'savings':r.cat).ic}</span><div class="lbody"><div class="ld">${esc(r.desc)}</div><div class="ldt">${r.day} · ${r.transfer?'transfer':catBy(r.cat).label}</div></div><div class="lamt ${r.amt>=0?'pos':'neg'}">${r.amt>=0?'+':'−'}€${fmt(Math.abs(r.amt))}</div></div>`).join('');
-  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Preview · ${s.bank==='CLEAN'?'LifeQuest CSV':s.bank} → ${s.acct==='perrow'?'per file':s.acct==='daily'?'💳 Daily':'🏦 Savings'}</div>
-    <div class="msummary" style="margin-top:8px"><div class="mbox"><div class="mv">${s.rows.length}</div><div class="ml">to import</div></div><div class="mbox"><div class="mv" style="color:var(--red)">€${fmt(spend)}</div><div class="ml">spending</div></div><div class="mbox"><div class="mv" style="color:var(--green)">€${fmt(income)}</div><div class="ml">in</div></div><div class="mbox"><div class="mv" style="color:var(--cyan)">${transfers}</div><div class="ml">transfers</div></div></div>
-    <div class="hint" style="margin-top:8px">${s.dupes?`${s.dupes} duplicate(s) skipped. `:''}${s.filtered&&!s.all?`${s.filtered} older than 90 days skipped. `:''}Transfers between your accounts won't count as spending.</div>
-    <div style="margin-top:10px;max-height:240px;overflow-y:auto">${sample}${s.rows.length>6?`<div class="hint">+ ${s.rows.length-6} more…</div>`:''}</div>
-    <div class="field" style="margin-top:12px"><button class="btn block" id="impCommit">✓ Import ${s.rows.length} transactions</button></div>
-    <div class="field"><button class="btn ghost sm" id="qClose">Cancel</button></div>`;
-  document.getElementById('qClose').onclick=closeModal;
-  document.getElementById('impCommit').onclick=commitImport;
-  if(!s.rows.length){const b=document.getElementById('impCommit');b.disabled=true;b.textContent='Nothing new to import';}
-}
-function commitImport(){
-  const s=importStaged; if(!s||!s.rows.length){closeModal();return;}
-  let net=0, savNet=0;
-  s.rows.forEach(r=>{
-    const dest = s.acct==='perrow' ? (r.acct||'daily') : s.acct;
-    if(dest==='daily'){ S.ledger.push({day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); net+=r.amt; }
-    else { S.savings.log.push({day:r.day,amt:r.amt}); savNet+=r.amt; }
-  });
-  if(net) S.balance=Math.round((S.balance+net)*100)/100;
-  if(savNet) S.savings.saved=Math.round((S.savings.saved+savNet)*100)/100;
-  save(); closeModal(); renderHud(); renderView();
-  toast(`✓ Imported ${s.rows.length} transaction${s.rows.length===1?'':'s'}`);
-  importStaged=null;
-}
 function openBalanceEdit(){
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Set account balances</div>
     <div class="lesson" style="font-size:13px">Enter what each account actually holds right now. This stays on your device — it's never sent anywhere, and never saved in the app's code.</div>
@@ -1037,7 +912,6 @@ function viewGold(){
     </div>
     <div class="field" style="margin-top:12px"><input id="xferAmt" type="number" step="0.01" placeholder="Transfer amount (€)" class="grow"></div>
     <div class="field"><button class="btn" id="toSav">💳→🏦 To savings</button><button class="btn ghost" id="toDaily">🏦→💳 To daily</button></div>
-    <div class="field" style="margin-top:4px"><button class="btn ghost sm" id="impOpen">📥 Import bank statement (CSV)</button></div>
     <div class="hint">Moving money to savings chips the boss below. Withdrawing moves it back and lowers it — honest tracking beats pretending.</div>
   </div>`;
   const bossCard=`<div class="bosscard">
@@ -1180,7 +1054,6 @@ const bind={
     const eg=document.getElementById('editGoal'); if(eg)eg.onclick=openGoalEdit;
     const eb=document.getElementById('editBal'); if(eb)eb.onclick=openBalanceEdit;
     add('aiCoachBtn',aiMoneyCoach);
-    add('impOpen',openImport);
   },
   mind(){
     add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
@@ -1952,9 +1825,6 @@ document.getElementById('bookFile').addEventListener('change',ev=>{
   r.onload=()=>{const tx=document.getElementById('bkText');const ti=document.getElementById('bkTitle');if(tx)tx.value=r.result;if(ti&&!ti.value)ti.value=f.name.replace(/\.(txt|md)$/i,'');toast('File loaded — review and Add');};
   r.readAsText(f);ev.target.value='';
 });
-
-// CSV bank import
-document.getElementById('csvFile').addEventListener('change',ev=>{const f=ev.target.files[0];if(f){const r=new FileReader();r.onload=()=>handleCSV(r.result);r.readAsText(f);}ev.target.value='';});
 
 // backup restore import
 document.getElementById('backupFile').addEventListener('change',ev=>{const f=ev.target.files[0];if(f)importData(f);ev.target.value='';});
