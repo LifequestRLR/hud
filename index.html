@@ -923,6 +923,7 @@ function cleanDesc(raw,party){
 function detectFormat(text){
   const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/);
   for(let i=0;i<Math.min(15,lines.length);i++){
+    if(/^account,date,description,amount,category/i.test(lines[i])) return {bank:'CLEAN',headerLine:i};
     if(/^Rekeningnummer;/.test(lines[i])) return {bank:'ING',headerLine:i};
     if(/^Rekening;Boekingsdatum;Rekeninguittrekselnummer/.test(lines[i])) return {bank:'BELFIUS',headerLine:i};
   }
@@ -931,13 +932,28 @@ function detectFormat(text){
 function parseBankCSV(text){
   text=text.replace(/^\uFEFF/,'');
   const fmt=detectFormat(text); if(!fmt) return {error:'unknown'};
-  const lines=text.split(/\r?\n/).slice(fmt.headerLine+1).filter(l=>l.trim()&&/^BE/i.test(l.trim()));
+  const lines=text.split(/\r?\n/).slice(fmt.headerLine+1).filter(l=>l.trim());
   const out=[];
-  for(const line of lines){
+  if(fmt.bank==='CLEAN'){
+    for(const line of lines){
+      const c=line.split(',');
+      if(c.length<5) continue;
+      const acct=(c[0]||'').trim().toLowerCase();
+      const date=(c[1]||'').trim();
+      const desc=(c[2]||'').trim()||'Transaction';
+      const amt=parseFloat(c[3]);
+      const cat=(c[4]||'other').trim().toLowerCase();
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||isNaN(amt)) continue;
+      out.push({day:date,amt:Math.round(amt*100)/100,desc,cat:cat==='transfer'?'transfer':cat,transfer:cat==='transfer',bank:'CLEAN',acct:acct==='sav'?'sav':'daily'});
+    }
+    return {bank:'CLEAN',rows:out,clean:true};
+  }
+  const filtered=lines.filter(l=>/^BE/i.test(l.trim()));
+  for(const line of filtered){
     const c=line.split(';');
-    let date,amt,desc,counter;
-    if(fmt.bank==='ING'){ date=parseDMY(c[4]); amt=parseAmt(c[6]); desc=cleanDesc(c[8],''); counter=(c[2]||'').replace(/\s/g,''); var rawForCat=c[8]||''; }
-    else { date=parseDMY(c[1]); amt=parseAmt(c[10]); desc=cleanDesc(c[8],c[5]); counter=(c[4]||'').replace(/\s/g,''); var rawForCat=(c[5]||'')+' '+(c[8]||''); }
+    let date,amt,desc,counter,rawForCat;
+    if(fmt.bank==='ING'){ date=parseDMY(c[4]); amt=parseAmt(c[6]); desc=cleanDesc(c[8],''); counter=(c[2]||'').replace(/\s/g,''); rawForCat=c[8]||''; }
+    else { date=parseDMY(c[1]); amt=parseAmt(c[10]); desc=cleanDesc(c[8],c[5]); counter=(c[4]||'').replace(/\s/g,''); rawForCat=(c[5]||'')+' '+(c[8]||''); }
     if(!date||isNaN(amt)) continue;
     const isTransfer=MY_IBANS.includes(counter)|| /STORTING VAN BE63|NAAR\s+BE88|NAAR\s+BE63/i.test(c.join(' '));
     out.push({day:date,amt:Math.round(amt*100)/100,desc,cat:amt>=0?'income':keywordCat(rawForCat),transfer:isTransfer,bank:fmt.bank});
@@ -966,8 +982,8 @@ function handleCSV(text){
   const seen=new Set(S.ledger.map(t=>t.day+'|'+t.amt+'|'+(t.desc||'')));
   const newRows=rows.filter(r=>!seen.has(r.day+'|'+r.amt+'|'+r.desc));
   const acctSel=document.getElementById('impAcct').value;
-  const acct=acctSel==='auto'?(res.bank==='ING'?'daily':'sav'):acctSel;
-  importStaged={rows:newRows,acct,bank:res.bank,dupes:rows.length-newRows.length,total:res.rows.length,filtered:res.rows.length-rows.length,all};
+  const acct=res.clean?(acctSel==='auto'?'perrow':acctSel):(acctSel==='auto'?(res.bank==='ING'?'daily':'sav'):acctSel);
+  importStaged={rows:newRows,acct,bank:res.bank,clean:!!res.clean,dupes:rows.length-newRows.length,total:res.rows.length,filtered:res.rows.length-rows.length,all};
   previewImport();
 }
 function previewImport(){
@@ -975,7 +991,7 @@ function previewImport(){
   const spend=s.rows.filter(r=>!r.transfer&&r.amt<0).reduce((a,r)=>a+(-r.amt),0);
   const income=s.rows.filter(r=>!r.transfer&&r.amt>0).reduce((a,r)=>a+r.amt,0);
   const sample=s.rows.slice(0,6).map(r=>`<div class="lrow"><span class="lic">${catBy(r.transfer?'savings':r.cat).ic}</span><div class="lbody"><div class="ld">${esc(r.desc)}</div><div class="ldt">${r.day} · ${r.transfer?'transfer':catBy(r.cat).label}</div></div><div class="lamt ${r.amt>=0?'pos':'neg'}">${r.amt>=0?'+':'−'}€${fmt(Math.abs(r.amt))}</div></div>`).join('');
-  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Preview · ${s.bank} → ${s.acct==='daily'?'💳 Daily':'🏦 Savings'}</div>
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Preview · ${s.bank==='CLEAN'?'LifeQuest CSV':s.bank} → ${s.acct==='perrow'?'per file':s.acct==='daily'?'💳 Daily':'🏦 Savings'}</div>
     <div class="msummary" style="margin-top:8px"><div class="mbox"><div class="mv">${s.rows.length}</div><div class="ml">to import</div></div><div class="mbox"><div class="mv" style="color:var(--red)">€${fmt(spend)}</div><div class="ml">spending</div></div><div class="mbox"><div class="mv" style="color:var(--green)">€${fmt(income)}</div><div class="ml">in</div></div><div class="mbox"><div class="mv" style="color:var(--cyan)">${transfers}</div><div class="ml">transfers</div></div></div>
     <div class="hint" style="margin-top:8px">${s.dupes?`${s.dupes} duplicate(s) skipped. `:''}${s.filtered&&!s.all?`${s.filtered} older than 90 days skipped. `:''}Transfers between your accounts won't count as spending.</div>
     <div style="margin-top:10px;max-height:240px;overflow-y:auto">${sample}${s.rows.length>6?`<div class="hint">+ ${s.rows.length-6} more…</div>`:''}</div>
@@ -989,13 +1005,14 @@ function commitImport(){
   const s=importStaged; if(!s||!s.rows.length){closeModal();return;}
   let net=0, savNet=0;
   s.rows.forEach(r=>{
-    if(s.acct==='daily'){ S.ledger.push({day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); net+=r.amt; }
+    const dest = s.acct==='perrow' ? (r.acct||'daily') : s.acct;
+    if(dest==='daily'){ S.ledger.push({day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); net+=r.amt; }
     else { S.savings.log.push({day:r.day,amt:r.amt}); savNet+=r.amt; }
   });
-  if(s.acct==='daily') S.balance=Math.round((S.balance+net)*100)/100;
-  else S.savings.saved=Math.round((S.savings.saved+savNet)*100)/100;
+  if(net) S.balance=Math.round((S.balance+net)*100)/100;
+  if(savNet) S.savings.saved=Math.round((S.savings.saved+savNet)*100)/100;
   save(); closeModal(); renderHud(); renderView();
-  toast(`✓ Imported ${s.rows.length} into ${s.acct==='daily'?'Daily':'Savings'}`);
+  toast(`✓ Imported ${s.rows.length} transaction${s.rows.length===1?'':'s'}`);
   importStaged=null;
 }
 function openBalanceEdit(){
