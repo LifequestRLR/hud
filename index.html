@@ -463,7 +463,7 @@ const DEFAULT={
   ],
   programs:buildPrograms(),
   session:null, sessions:[],
-  ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, journal:[], wakeTime:"07:00",
+  ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, asOf:{daily:'',sav:''}, journal:[], wakeTime:"07:00",
   mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}, generated:[]},
   backend:{url:'', key:''},
   events:[], // imported calendar
@@ -479,7 +479,7 @@ async function load(){
   if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
   S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
       S.backend=S.backend||{url:'',key:''};
-  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();});
+  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''};
   rolloverDay(); booted=true; renderAll();
 }
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S,(k,v)=>k.charAt(0)==='_'?undefined:v)),250);}
@@ -504,7 +504,7 @@ function importData(file){
       save();
       S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
       S.backend=S.backend||{url:'',key:''};
-      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();});
+      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''};
       renderAll();
       toast('✓ Backup restored');
     }catch(e){toast('Not a valid backup file');}
@@ -1011,10 +1011,13 @@ function previewImport(){
   const s=importStaged; const transfers=s.rows.filter(r=>r.transfer).length;
   const spend=s.rows.filter(r=>!r.transfer&&r.amt<0).reduce((a,r)=>a+(-r.amt),0);
   const income=s.rows.filter(r=>!r.transfer&&r.amt>0).reduce((a,r)=>a+r.amt,0);
-  const sample=s.rows.slice(0,6).map(r=>`<div class="lrow"><span class="lic">${catBy(r.transfer?'savings':r.cat).ic}</span><div class="lbody"><div class="ld">${esc(r.desc)}</div><div class="ldt">${r.day} · ${r.transfer?'transfer':catBy(r.cat).label}</div></div><div class="lamt ${r.amt>=0?'pos':'neg'}">${r.amt>=0?'+':'−'}€${fmt(Math.abs(r.amt))}</div></div>`).join('');
+  const affectsRow=r=>{const dest=s.acct==='perrow'?(r.acct||'daily'):s.acct;const a=(S.asOf&&S.asOf[dest])||'';return !a||r.day>a;};
+  const newer=s.rows.filter(affectsRow).length, histOnly=s.rows.length-newer;
+  const anchorTxt=(()=>{const dest=s.acct==='perrow'?'daily':s.acct;return (S.asOf&&S.asOf[dest])||'';})();
+  const sample=s.rows.slice(0,6).map(r=>`<div class="lrow"><span class="lic">${catBy(r.transfer?'savings':r.cat).ic}</span><div class="lbody"><div class="ld">${esc(r.desc)}</div><div class="ldt">${r.day} · ${r.transfer?'transfer':catBy(r.cat).label}${affectsRow(r)?'':' · history'}</div></div><div class="lamt ${r.amt>=0?'pos':'neg'}">${r.amt>=0?'+':'−'}€${fmt(Math.abs(r.amt))}</div></div>`).join('');
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Preview · ${s.bank==='CLEAN'?'LifeQuest CSV':s.bank} → ${s.acct==='perrow'?'per file':s.acct==='daily'?'💳 Daily':'🏦 Savings'}</div>
     <div class="msummary" style="margin-top:8px"><div class="mbox"><div class="mv">${s.rows.length}</div><div class="ml">to import</div></div><div class="mbox"><div class="mv" style="color:var(--red)">€${fmt(spend)}</div><div class="ml">spending</div></div><div class="mbox"><div class="mv" style="color:var(--green)">€${fmt(income)}</div><div class="ml">in</div></div><div class="mbox"><div class="mv" style="color:var(--cyan)">${transfers}</div><div class="ml">transfers</div></div></div>
-    <div class="hint" style="margin-top:8px">${s.dupes?`${s.dupes} duplicate(s) skipped. `:''}${s.filtered&&!s.all?`${s.filtered} older than 90 days skipped. `:''}Transfers between your accounts won't count as spending.</div>
+    <div class="hint" style="margin-top:8px">${anchorTxt?`<b style="color:var(--gold)">${newer}</b> after ${anchorTxt} will update your balance; <b>${histOnly}</b> older recorded as history only (won't double-count). `:`No "as of" date set — all ${s.rows.length} will adjust the balance. Set one via "set balances" to avoid double-counting old history. `}${s.dupes?`${s.dupes} duplicate(s) skipped. `:''}Transfers between your accounts don't count as spending.</div>
     <div style="margin-top:10px;max-height:240px;overflow-y:auto">${sample}${s.rows.length>6?`<div class="hint">+ ${s.rows.length-6} more…</div>`:''}</div>
     <div class="field" style="margin-top:12px"><button class="btn block" id="impCommit">✓ Import ${s.rows.length} transactions</button></div>
     <div class="field"><button class="btn ghost sm" id="qClose">Cancel</button></div>`;
@@ -1027,8 +1030,10 @@ function commitImport(){
   let net=0, savNet=0;
   s.rows.forEach(r=>{
     const dest = s.acct==='perrow' ? (r.acct||'daily') : s.acct;
-    if(dest==='daily'){ S.ledger.push({id:id(),day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); net+=r.amt; }
-    else { S.savings.log.push({day:r.day,amt:r.amt}); savNet+=r.amt; }
+    const anchor=(S.asOf&&S.asOf[dest])||'';
+    const affects = !anchor || r.day>anchor; // only transactions AFTER the as-of date move the balance
+    if(dest==='daily'){ S.ledger.push({id:id(),day:r.day,desc:r.desc,amt:r.amt,cat:r.transfer?'transfer':r.cat}); if(affects)net+=r.amt; }
+    else { S.savings.log.push({day:r.day,amt:r.amt}); if(affects)savNet+=r.amt; }
   });
   if(net) S.balance=Math.round((S.balance+net)*100)/100;
   if(savNet) S.savings.saved=Math.round((S.savings.saved+savNet)*100)/100;
@@ -1038,14 +1043,15 @@ function commitImport(){
 }
 function openBalanceEdit(){
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Set account balances</div>
-    <div class="lesson" style="font-size:13px">Enter what each account actually holds right now. This stays on your device — it's never sent anywhere, and never saved in the app's code.</div>
+    <div class="lesson" style="font-size:13px">Enter what each account actually holds right now, and the date that's true as of. Future imports only change the balance for transactions <b>after</b> this date — so importing old history won't double-count. Stays on this device only.</div>
     <div style="font-size:11px;color:var(--muted);margin-top:12px">💳 Daily</div><input id="balDaily" type="number" step="0.01" value="${S.balance}" style="width:100%;margin-top:4px">
     <div style="font-size:11px;color:var(--muted);margin-top:10px">🏦 Savings</div><input id="balSav" type="number" step="0.01" value="${S.savings.saved}" style="width:100%;margin-top:4px">
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">Balances accurate as of</div><input id="balAsOf" type="date" value="${(S.asOf&&S.asOf.daily)||today()}" style="width:100%;margin-top:4px">
     <div class="field" style="margin-top:12px"><button class="btn block" id="balSave">Save balances</button></div>
     <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
-  document.getElementById('balSave').onclick=()=>{const d=parseFloat(document.getElementById('balDaily').value);const sv=parseFloat(document.getElementById('balSav').value);if(!isNaN(d))S.balance=Math.round(d*100)/100;if(!isNaN(sv))S.savings.saved=Math.round(sv*100)/100;save();closeModal();renderHud();renderView();toast('Balances updated');};
+  document.getElementById('balSave').onclick=()=>{const d=parseFloat(document.getElementById('balDaily').value);const sv=parseFloat(document.getElementById('balSav').value);const ao=document.getElementById('balAsOf').value||today();if(!isNaN(d))S.balance=Math.round(d*100)/100;if(!isNaN(sv))S.savings.saved=Math.round(sv*100)/100;S.asOf={daily:ao,sav:ao};save();closeModal();renderHud();renderView();toast('Balances set as of '+ao);};
 }
 function viewGold(){
   const m=monthStats(0), prev=monthStats(1), s=S.savings;
