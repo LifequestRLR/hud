@@ -353,6 +353,7 @@
   .ayah-actions{display:flex;gap:16px;justify-content:center;margin-top:16px;flex-wrap:wrap}
   .sbtn{background:none;border:none;color:#8fb89a;font-size:12.5px;font-family:'JetBrains Mono';cursor:pointer;text-decoration:none;padding:0}
   .ayah-src{font-size:10px;color:var(--faint);margin-top:10px}
+  .ayahload{font-family:'JetBrains Mono';font-size:12.5px;color:#8fb89a;padding:26px 0;opacity:.85;animation:fade 1.2s ease-in-out infinite alternate}
   .btn.sober{background:transparent;border:1px solid #5a7a66;color:#a9cdb4;box-shadow:none;font-weight:600;margin-top:16px}
   .btn.sober:hover{background:rgba(134,179,154,.08)}
   .seg{display:flex;gap:8px;margin:0 0 13px}
@@ -1210,8 +1211,9 @@ function viewMind(){
 //================= BINDINGS =================
 const bind={
   spirit(){
+    if(!ayahFresh()) ensureDailyAyah();
     const tl=document.getElementById('tlBtn'); if(tl)tl.onclick=()=>{const e=document.getElementById('ayahTL');const sh=e.style.display==='none';e.style.display=sh?'block':'none';tl.textContent=sh?'hide transliteration':'show transliteration';};
-    add('ayahReflect',()=>openSpiritReflect('Ayah — '+dayAyah().ref, dayAyah().prompt));
+    const ar=document.getElementById('ayahReflect'); if(ar)ar.onclick=()=>{const a=S.spirit.ayah;if(a)openSpiritReflect('Ayah — '+a.ref, a.prompt||ayahPrompt());};
     document.querySelectorAll('#view .segb').forEach(b=>b.onclick=()=>{spiritView=b.dataset.sv;renderView();});
     document.querySelectorAll('#view .screading').forEach(el=>el.onclick=()=>openSpiritReading(el.dataset.kind,el.dataset.sid));
   },
@@ -2165,32 +2167,70 @@ It's not a tidy promise that pain is "worth it." It's a harder, steadier claim: 
   prompt:"What's a 'why' that has carried you through something hard — and is it still in front of you, or have you lost sight of it?"},
 ];
 let spiritView='islam';
-function dayAyah(){ return AYAT[dayNum()%AYAT.length]; }
+const QHOSTS=['https://api.alquran.cloud','https://alquran.api.islamic.network'];
+const GENERIC_PROMPTS=[
+ "Sit with this. What does it stir in you today?",
+ "Read it slowly, twice. Which word stays with you?",
+ "Where does this meet your life right now?",
+ "What would shift in your day if you held this close?",
+ "Notice your first reaction — then the one underneath it.",
+ "What does this ask of you, gently?",
+];
+function ayahPrompt(){ return GENERIC_PROMPTS[dayNum()%GENERIC_PROMPTS.length]; }
+function ayahFresh(){ const a=S.spirit.ayah; return a && a.day===today() && !a.offline; }
+async function fetchDailyAyah(){
+  const idx=((dayNum()*2741)%6236)+1;
+  const path=`/v1/ayah/${idx}/editions/quran-uthmani,en.pickthall,en.transliteration`;
+  let j=null;
+  for(const h of QHOSTS){
+    try{ const r=await fetch(h+path); if(!r.ok)continue; const d=await r.json(); if(d&&d.code===200&&Array.isArray(d.data)){j=d;break;} }catch(e){}
+  }
+  if(!j) throw 0;
+  const by={}; j.data.forEach(d=>{by[d.edition.identifier]=d;});
+  const ar=by['quran-uthmani'], en=by['en.pickthall'], tl=by['en.transliteration'];
+  if(!ar||!en) throw 0;
+  const s=ar.surah;
+  return {day:today(),offline:false,idx,ar:ar.text,en:en.text,tl:tl?tl.text:'',ref:`${s.englishName} · ${s.number}:${ar.numberInSurah}`,url:`https://quran.com/${s.number}/${ar.numberInSurah}`,prompt:ayahPrompt()};
+}
+let _ayahBusy=false;
+async function ensureDailyAyah(){
+  if(_ayahBusy||ayahFresh())return; _ayahBusy=true;
+  try{
+    const a=await fetchDailyAyah(); S.spirit.ayah=a; save(); if(active==='spirit')renderView();
+  }catch(e){
+    if(!(S.spirit.ayah&&S.spirit.ayah.day===today())){
+      const f=AYAT[dayNum()%AYAT.length];
+      S.spirit.ayah={day:today(),offline:true,ar:f.ar,en:f.en,tl:f.tl,ref:f.ref,url:f.url,prompt:f.prompt};
+      save(); if(active==='spirit')renderView();
+    }
+  } finally{ _ayahBusy=false; }
+}
 function spiritDays(){ return new Set((S.spirit.notes||[]).map(n=>n.when)).size; }
 function viewSpirit(){
-  const a=dayAyah();
+  const a=(S.spirit.ayah&&S.spirit.ayah.day===today())?S.spirit.ayah:null;
   const list=spiritView==='islam'?SPIRIT_ISLAM:SPIRIT_PHIL;
   const cards=list.map(p=>`<div class="screading" data-sid="${p.id}" data-kind="${spiritView}"><div class="srt">${esc(p.title)}</div><div class="srs">${esc(p.sub||'')}</div></div>`).join('');
   const d=spiritDays();
   const notes=(S.spirit.notes||[]).slice().reverse().slice(0,8).map(n=>`<div class="snote"><div class="sndt">${n.when} · ${esc(n.on)}</div><div class="sntx">${esc(n.text)}</div></div>`).join('')||'<div class="empty">Nothing yet. Write when something lands — it stays private, just for you.</div>';
-  return `
-  <div class="card spirit-intro"><div class="sintro">A space away from the scoreboard. Nothing to win here — only to notice, question, and sit with. Take what speaks to you; leave the rest.</div></div>
-  <div class="card ayah-card">
+  const ayahCard = a ? `<div class="card ayah-card">
     <div class="ayah-ref">${esc(a.ref)}</div>
     <div class="ayah-ar" dir="rtl" lang="ar">${esc(a.ar)}</div>
     <div class="ayah-tl" id="ayahTL" style="display:none">${esc(a.tl)}</div>
     <div class="ayah-en">${esc(a.en)}</div>
     <div class="ayah-actions"><button class="sbtn" id="tlBtn">show transliteration</button><a class="sbtn" href="${a.url}" target="_blank" rel="noopener">verify on Quran.com ↗</a></div>
-    <div class="ayah-src">English: Pickthall (public domain)</div>
+    <div class="ayah-src">English: Pickthall (public domain)${a.offline?' · offline verse — reconnect for the full Quran':' · via alquran.cloud'}</div>
     <button class="btn sober" id="ayahReflect">Reflect on this</button>
-  </div>
+  </div>` : `<div class="card ayah-card"><div class="ayah-ref">Verse of the day</div><div class="ayahload">Bringing today's verse…</div></div>`;
+  return `
+  <div class="card spirit-intro"><div class="sintro">A space away from the scoreboard. Nothing to win here — only to notice, question, and sit with. Take what speaks to you; leave the rest.</div></div>
+  ${ayahCard}
   <div class="seg">
     <button class="segb ${spiritView==='islam'?'on':''}" data-sv="islam">☪ Islam</button>
     <button class="segb ${spiritView==='phil'?'on':''}" data-sv="phil">🌍 Philosophy</button>
   </div>
   <div class="card"><h2 class="sober-h">${spiritView==='islam'?'Knowledge & history':'Ideas to sit with'}</h2>${cards}</div>
   <div class="card"><h2 class="sober-h">Reflections <span class="sdays">${d} day${d===1?'':'s'}</span></h2>${notes}</div>
-  <div class="hint sdisc">A companion for learning and reflection — not a religious authority, and not a substitute for scholars. Islamic content is kept to widely-agreed, mainstream knowledge; please verify with teachers and primary sources, and tell me of any error. Where understandings differ, that is noted. Philosophy here offers questions, never one answer.</div>`;
+  <div class="hint sdisc">A companion for learning and reflection — not a religious authority, and not a substitute for scholars. Verses are served from alquran.cloud (Arabic + Pickthall + transliteration); Islamic knowledge here is kept to widely-agreed, mainstream material — verify with teachers and primary sources, and tell me of any error. Philosophy offers questions, never one answer.</div>`;
 }
 function openSpiritReading(kind,sid){
   const list=kind==='islam'?SPIRIT_ISLAM:SPIRIT_PHIL;
