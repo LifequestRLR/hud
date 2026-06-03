@@ -897,7 +897,7 @@ const MY_IBANS=['BE63363088926408','BE8806371616 1341'.replace(/\s/g,'')];
 const CATRULES=[
   {cat:'food',words:['colruyt','delhaize','carrefour','okay','aldi','lidl','spar','albert heijn','ah ','jumbo','intermarche','match','cru ','bakker','slagerij','night shop','nachtwinkel']},
   {cat:'eatingout',words:['takeaway','deliveroo','uber eats','ubereats','mcdonald','burger king','quick','frituur','friterie','pizza','kebab','restaurant','resto','starbucks','panos','exki','subway']},
-  {cat:'transport',words:['esso','shell','q8','total','texaco','lukoil','nmbs','sncb','de lijn','mivb','stib','tec ','uber','bolt','parking','tankstation','total energies','dats']},
+  {cat:'transport',words:['esso','shell','q8','total','texaco','lukoil','nmbs','sncb','de lijn','mivb','stib','tec ','uber','ubr','bolt','voi ','tier','lime','dott','parking','tankstation','total energies','dats','ok elsloo','octa']},
   {cat:'fun',words:['weezevent','ticketing','ticketmaster','extrema','tomorrowland','cinema','kinepolis','pathe','cafe','bar ','pub','club','festival','event','voodoo']},
   {cat:'shopping',words:['bol.com','bol com','coolblue','amazon','zalando','mediamarkt','krefel','decathlon','action','hema','jbc','zara','h&m','primark','asos','apple','torfs']},
   {cat:'bills',words:['proximus','telenet','orange','base','luminus','engie','mega','water','huur','rent','verzekering','insurance','belasting','gsm','internet','netflix','spotify','disney','claude.ai','openai','subscription','abonnement']},
@@ -914,6 +914,19 @@ function parseAmt(s){
   return parseFloat(s);
 }
 function parseDMY(s){ const m=(s||'').trim().match(/(\d{2})\/(\d{2})\/(\d{4})/); return m?`${m[3]}-${m[2]}-${m[1]}`:null; }
+function ingMerchant(raw){
+  let d=(raw||'').replace(/\s+/g,' ').trim();
+  let m=d.match(/uur\s*-\s*(.+)$/i);
+  if(m){ d=m[1]; }
+  else { let v=d.match(/\b(?:Van|Naar)\s*:\s*(.+)$/i);
+    if(v){ d=v[1]; }
+    else { d=d.replace(/^(Domicili[eë]ring|Overschrijving|Instantoverschrijving|Terugbetaling|Betaling|Geldopneming)\s+(in euro\s*)?(\(SEPA\))?\s*:?\s*/i,''); } }
+  d=d.replace(/\s*-\s*(NL|BE)\s?\d[\dA-Z ]*$/i,'');      // trailing IBAN
+  d=d.replace(/\*+\s*PENDING\b/i,'').replace(/\bPENDING\b/i,'');
+  d=d.replace(/\s+\d{3,}\s*$/,'');                        // trailing store/postcode numbers
+  d=d.replace(/[*]+$/,'').replace(/\s*-\s*$/,'').replace(/\s+/g,' ').trim();
+  return (d.slice(0,40)||'Transaction');
+}
 function cleanDesc(raw,party){
   let d=(party&&party.trim())?party.trim():(raw||'');
   d=d.replace(/\s+/g,' ').trim();
@@ -952,7 +965,7 @@ function parseBankCSV(text){
   for(const line of filtered){
     const c=line.split(';');
     let date,amt,desc,counter,rawForCat;
-    if(fmt.bank==='ING'){ date=parseDMY(c[4]); amt=parseAmt(c[6]); desc=cleanDesc(c[8],''); counter=(c[2]||'').replace(/\s/g,''); rawForCat=c[8]||''; }
+    if(fmt.bank==='ING'){ date=parseDMY(c[4]); amt=parseAmt(c[6]); desc=ingMerchant(c[8]); counter=(c[2]||'').replace(/\s/g,''); rawForCat=c[8]||''; }
     else { date=parseDMY(c[1]); amt=parseAmt(c[10]); desc=cleanDesc(c[8],c[5]); counter=(c[4]||'').replace(/\s/g,''); rawForCat=(c[5]||'')+' '+(c[8]||''); }
     if(!date||isNaN(amt)) continue;
     const isTransfer=MY_IBANS.includes(counter)|| /STORTING VAN BE63|NAAR\s+BE88|NAAR\s+BE63/i.test(c.join(' '));
@@ -989,10 +1002,16 @@ function openImport(){
     <select id="impAcct" style="width:100%;margin-top:4px"><option value="auto">Auto-detect (ING→Daily, Belfius→Savings)</option><option value="daily">💳 Daily</option><option value="sav">🏦 Savings</option></select>
     <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px"><input type="checkbox" id="impAll" style="width:auto"> Import full history (otherwise last 90 days)</label>
     <div class="field" style="margin-top:12px"><button class="btn block" id="impPick">📂 Choose CSV file</button></div>
-    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+    <div class="field"><button class="btn ghost sm" id="impClear" style="color:var(--red)">🗑 Clear imported transactions</button><button class="btn ghost sm" id="qClose">Close</button></div>
+    <div class="hint">Re-importing after changing how names are read? Clear first to avoid duplicates. This wipes transaction <i>history</i> only — your balances and savings goal stay.</div>`;
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
   document.getElementById('impPick').onclick=()=>document.getElementById('csvFile').click();
+  let armed=false;
+  document.getElementById('impClear').onclick=function(){
+    if(!armed){armed=true;this.textContent='⚠ Tap again to clear all';return;}
+    S.ledger=[]; S.savings.log=[]; save(); renderHud(); renderView(); closeModal(); toast('Transaction history cleared');
+  };
 }
 function handleCSV(text){
   const res=parseBankCSV(text);

@@ -1,5 +1,5 @@
 // LifeQuest service worker — network-first for the app, cache-first for assets.
-const CACHE = 'lifequest-v30';
+const CACHE = 'lifequest-v31';
 const CORE = ['./', './index.html', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
