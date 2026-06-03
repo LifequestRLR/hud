@@ -214,25 +214,42 @@
   .pdone-card{text-align:center}
   .pdone-card .big{font-family:'Chakra Petch';font-size:30px;color:var(--gold);font-weight:700;margin-bottom:6px}
 
-  /* animated stick figure */
-  .figure{width:150px;height:200px;display:block;margin:0 auto;overflow:visible}
-  .figure line{stroke:var(--cyan);stroke-width:6;stroke-linecap:round;fill:none}
-  .figure .head{fill:var(--cyan);stroke:none}
-  .figure .fig,.figure .arms,.figure .head{transform-box:view-box}
-  .anim-sway .fig{transform-origin:60px 96px;animation:swayK 2.6s ease-in-out infinite}
-  @keyframes swayK{0%,100%{transform:rotate(-15deg)}50%{transform:rotate(15deg)}}
-  .anim-twist .fig{transform-origin:60px 90px;animation:twistK 2.4s ease-in-out infinite}
-  @keyframes twistK{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.35)}}
-  .anim-circle .arms{transform-origin:60px 50px;animation:circK 2s linear infinite}
-  @keyframes circK{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-  .anim-hinge .fig{transform-origin:60px 96px;animation:hingeK 3s ease-in-out infinite}
-  @keyframes hingeK{0%,100%{transform:rotate(0)}45%,55%{transform:rotate(50deg)}}
-  .anim-nod .head{transform-origin:60px 36px;animation:nodK 2.4s ease-in-out infinite}
-  @keyframes nodK{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
-  .anim-breathe .fig{transform-origin:60px 80px;animation:breK 3.4s ease-in-out infinite}
-  @keyframes breK{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
-  .anim-bob .fig{transform-origin:60px 96px;animation:bobK 2s ease-in-out infinite}
-  @keyframes bobK{0%,100%{transform:translateY(0) rotate(5deg)}50%{transform:translateY(11px) rotate(9deg)}}
+  /* animated figure */
+  .figure{width:165px;height:215px;display:block;margin:0 auto;overflow:visible;filter:drop-shadow(0 0 7px rgba(70,214,200,.35))}
+  .figure .limb,.figure .torso,.figure .neck{stroke:var(--cyan);stroke-linecap:round;fill:none}
+  .figure .limb{stroke-width:9}
+  .figure .torso{stroke-width:14}
+  .figure .neck{stroke-width:8}
+  .figure .head{fill:var(--cyan)}
+  .figure g{transform-box:view-box}
+  .f-up{transform-origin:60px 92px}
+  .f-head{transform-origin:60px 40px}
+  .f-armL{transform-origin:56px 52px}
+  .f-armR{transform-origin:64px 52px}
+  .f-legL{transform-origin:58px 92px}
+  .f-legR{transform-origin:62px 92px}
+  .anim-neck .f-head{animation:neckK 2.8s ease-in-out infinite}
+  @keyframes neckK{0%,100%{transform:rotate(-17deg)}50%{transform:rotate(17deg)}}
+  .anim-armcircle .f-armL,.anim-armcircle .f-armR{animation:armK 2.3s linear infinite}
+  @keyframes armK{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  .anim-sidebend .f-up{animation:sideK 3s ease-in-out infinite}
+  @keyframes sideK{0%,100%{transform:rotate(-18deg)}50%{transform:rotate(18deg)}}
+  .anim-twist .f-up{animation:twistK 2.6s ease-in-out infinite}
+  @keyframes twistK{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.5)}}
+  .anim-hipcircle .f-all{animation:hipK 2.4s linear infinite}
+  @keyframes hipK{0%{transform:translate(8px,0)}25%{transform:translate(0,6px)}50%{transform:translate(-8px,0)}75%{transform:translate(0,-6px)}100%{transform:translate(8px,0)}}
+  .anim-hinge .f-up{animation:hingeK 3.3s ease-in-out infinite}
+  @keyframes hingeK{0%,100%{transform:rotate(0)}45%,55%{transform:rotate(72deg)}}
+  .anim-catcow .f-up{animation:catK 3s ease-in-out infinite}
+  @keyframes catK{0%,100%{transform:rotate(8deg)}50%{transform:rotate(-10deg)}}
+  .anim-catcow .f-head{animation:catHeadK 3s ease-in-out infinite}
+  @keyframes catHeadK{0%,100%{transform:rotate(15deg)}50%{transform:rotate(-17deg)}}
+  .anim-lunge .f-legR{animation:lungeRK 3.4s ease-in-out infinite}
+  @keyframes lungeRK{0%,100%{transform:rotate(0)}40%,62%{transform:rotate(-30deg)}}
+  .anim-lunge .f-legL{animation:lungeLK 3.4s ease-in-out infinite}
+  @keyframes lungeLK{0%,100%{transform:rotate(0)}40%,62%{transform:rotate(22deg)}}
+  .anim-lunge .f-all{animation:lungeDipK 3.4s ease-in-out infinite}
+  @keyframes lungeDipK{0%,100%{transform:translateY(0)}40%,62%{transform:translateY(9px)}}
 
   /* MIND HUD */
   .mtrack{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:11px;margin-bottom:8px}
@@ -436,14 +453,14 @@ const DEFAULT={
     {id:id(),title:"Mobility flow (5 min)",xp:20,tag:"body",done:false,day:today(),
      desc:"A short follow-along mobility routine to keep joints and tendons healthy and your nervous system loose. Tap Start and follow each move with the timer.",
      guide:[
-       {name:"Neck rolls",instr:"Slow circles, 5 each direction. Ease the tension out.",dur:30,anim:"nod"},
-       {name:"Arm circles",instr:"Big circles forward, then reverse halfway through.",dur:30,anim:"circle"},
-       {name:"Standing side bend",instr:"Reach one arm overhead, lean to the side. Switch at halfway.",dur:40,anim:"sway"},
+       {name:"Neck rolls",instr:"Slow circles, 5 each direction. Ease the tension out.",dur:30,anim:"neck"},
+       {name:"Arm circles",instr:"Big circles forward, then reverse halfway through.",dur:30,anim:"armcircle"},
+       {name:"Standing side bend",instr:"Reach one arm overhead, lean to the side. Switch at halfway.",dur:40,anim:"sidebend"},
        {name:"Torso twists",instr:"Rotate side to side, let your eyes lead the turn.",dur:30,anim:"twist"},
-       {name:"Hip circles",instr:"Hands on hips, draw big circles — both directions.",dur:30,anim:"circle"},
-       {name:"Deep lunge reach",instr:"Step into a lunge, drop the hips, reach up. Switch at halfway.",dur:40,anim:"bob"},
+       {name:"Hip circles",instr:"Hands on hips, draw big circles — both directions.",dur:30,anim:"hipcircle"},
+       {name:"Deep lunge reach",instr:"Step into a lunge, drop the hips, reach up. Switch at halfway.",dur:40,anim:"lunge"},
        {name:"Hamstring hinge",instr:"Hinge at the hips, reach toward your toes, soft knees.",dur:30,anim:"hinge"},
-       {name:"Spinal flex (cat-cow)",instr:"Round and arch the spine slowly, in time with your breath.",dur:30,anim:"breathe"},
+       {name:"Spinal flex (cat-cow)",instr:"Round and arch the spine slowly, in time with your breath.",dur:30,anim:"catcow"},
      ]},
     {id:id(),title:"7–9h sleep locked in",xp:20,tag:"body",done:false,day:today(),
      desc:"Lock 7–9h. Non-negotiable for recovery and nervous-system reset — use the Alarm tab to back-calculate a cycle-aligned bedtime."},
@@ -1369,12 +1386,16 @@ function completeQuest(qid){
 
 //================= GUIDED PLAYER (timer + animated demo) =================
 function figureSVG(anim){
-  return `<svg class="figure anim-${anim}" viewBox="0 0 120 160">
-    <g class="fig">
-      <circle class="head" cx="60" cy="24" r="12"/>
-      <line class="torso" x1="60" y1="36" x2="60" y2="96"/>
-      <g class="arms"><line x1="60" y1="50" x2="33" y2="72"/><line x1="60" y1="50" x2="87" y2="72"/></g>
-      <g class="legs"><line x1="60" y1="96" x2="43" y2="142"/><line x1="60" y1="96" x2="77" y2="142"/></g>
+  return `<svg class="figure anim-${anim}" viewBox="0 0 120 175">
+    <g class="f-all">
+      <g class="f-legL"><line class="limb" x1="58" y1="92" x2="48" y2="150"/></g>
+      <g class="f-legR"><line class="limb" x1="62" y1="92" x2="72" y2="150"/></g>
+      <g class="f-up">
+        <line class="torso" x1="60" y1="46" x2="60" y2="92"/>
+        <g class="f-armL"><line class="limb" x1="56" y1="52" x2="40" y2="84"/></g>
+        <g class="f-armR"><line class="limb" x1="64" y1="52" x2="80" y2="84"/></g>
+        <g class="f-head"><line class="neck" x1="60" y1="38" x2="60" y2="46"/><circle class="head" cx="60" cy="26" r="11"/></g>
+      </g>
     </g></svg>`;
 }
 const RING_CIRC=2*Math.PI*58;
@@ -1404,7 +1425,7 @@ function loadStep(){
   player.remaining=s.dur;
   document.getElementById('pStep').textContent=`Step ${player.idx+1} / ${player.steps.length}`;
   document.getElementById('pProgress').innerHTML=player.steps.map((_,i)=>`<i class="${i<player.idx?'cleared':(i===player.idx?'on':'')}"></i>`).join('');
-  document.getElementById('figStage').innerHTML=figureSVG(s.anim||'breathe');
+  document.getElementById('figStage').innerHTML=figureSVG(s.anim||'neck');
   document.getElementById('pMove').textContent=s.name;
   document.getElementById('pInstr').textContent=s.instr;
   const nx=player.steps[player.idx+1];
