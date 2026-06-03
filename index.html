@@ -341,6 +341,37 @@
   .lrow .ldt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint)}
   .lrow .lamt{font-family:'JetBrains Mono';font-size:14px}
   .lrow .lamt.pos{color:var(--green)}.lrow .lamt.neg{color:var(--red)}
+
+  /* SPIRIT — calm sanctuary */
+  .spirit-intro{border-color:#3a4a40;background:linear-gradient(160deg,rgba(134,179,154,.06),var(--panel2))}
+  .sintro{font-family:'Sora';font-size:14px;line-height:1.75;color:#cdd8d0}
+  .ayah-card{border-color:#3f5247;background:linear-gradient(165deg,rgba(134,179,154,.09),rgba(200,180,145,.04),var(--panel2));text-align:center;padding:24px 18px}
+  .ayah-ref{font-family:'JetBrains Mono';font-size:11px;letter-spacing:.12em;color:#8fb89a;text-transform:uppercase}
+  .ayah-ar{font-family:'Geeza Pro','Noto Naskh Arabic','Scheherazade New',serif;font-size:30px;line-height:2;color:#f3eedf;margin:18px 0 8px}
+  .ayah-tl{font-style:italic;font-size:13.5px;color:#9bbfa8;line-height:1.6;margin:6px 0}
+  .ayah-en{font-family:'Sora';font-size:16px;line-height:1.7;color:#e7e2d3;margin-top:8px}
+  .ayah-actions{display:flex;gap:16px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .sbtn{background:none;border:none;color:#8fb89a;font-size:12.5px;font-family:'JetBrains Mono';cursor:pointer;text-decoration:none;padding:0}
+  .ayah-src{font-size:10px;color:var(--faint);margin-top:10px}
+  .btn.sober{background:transparent;border:1px solid #5a7a66;color:#a9cdb4;box-shadow:none;font-weight:600;margin-top:16px}
+  .btn.sober:hover{background:rgba(134,179,154,.08)}
+  .seg{display:flex;gap:8px;margin:0 0 13px}
+  .segb{flex:1;padding:11px;border:1px solid var(--line);background:var(--panel2);border-radius:11px;color:var(--muted);font-family:'Chakra Petch';font-size:13px;cursor:pointer}
+  .segb.on{border-color:#5a7a66;color:#cfe0d5;background:rgba(134,179,154,.09)}
+  .sober-h{color:#a9cdb4 !important}
+  .screading{border:1px solid var(--line);border-radius:11px;background:var(--panel2);padding:14px;margin-bottom:8px;cursor:pointer;transition:.15s}
+  .screading:hover{border-color:#5a7a66;background:rgba(134,179,154,.04)}
+  .screading .srt{font-family:'Chakra Petch';font-size:15px;color:#ece7da}
+  .screading .srs{font-size:12px;color:var(--muted);margin-top:2px}
+  .sdays{color:#8fb89a !important;font-family:'JetBrains Mono';font-size:11px}
+  .snote{border-left:2px solid #5a7a66;padding:5px 0 5px 12px;margin-bottom:11px}
+  .snote .sndt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint)}
+  .snote .sntx{font-size:13.5px;line-height:1.6;color:#dfe3da;margin-top:3px;white-space:pre-wrap}
+  .sdisc{margin-top:6px;line-height:1.6}
+  .srkicker{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#8fb89a}
+  .srtitle{font-family:'Chakra Petch';font-size:21px;color:#f1ece0;margin:4px 0 14px}
+  .srbody p{font-size:14.5px;line-height:1.8;color:#e2e6dd;margin:0 0 13px}
+  .srprompt{font-size:16.5px;line-height:1.6;color:#ece7da;margin-top:6px}
   @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.phases{flex-direction:column}}
 </style>
 </head>
@@ -480,7 +511,7 @@ const DEFAULT={
   ],
   programs:buildPrograms(),
   session:null, sessions:[],
-  ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, asOf:{daily:'',sav:''}, journal:[], wakeTime:"07:00",
+  ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, asOf:{daily:'',sav:''}, spirit:{notes:[]}, journal:[], wakeTime:"07:00",
   mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}, generated:[]},
   backend:{url:'', key:''},
   events:[], // imported calendar
@@ -496,7 +527,7 @@ async function load(){
   if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
   S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
       S.backend=S.backend||{url:'',key:''};
-  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''};
+  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
   rolloverDay(); booted=true; renderAll();
 }
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S,(k,v)=>k.charAt(0)==='_'?undefined:v)),250);}
@@ -521,7 +552,7 @@ function importData(file){
       save();
       S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
       S.backend=S.backend||{url:'',key:''};
-      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''};
+      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
       renderAll();
       toast('✓ Backup restored');
     }catch(e){toast('Not a valid backup file');}
@@ -573,7 +604,7 @@ function lastV(mid){const m=S.metrics.find(x=>x.id===mid);return m&&m.log.length
 function fmt(n){return (Math.round(n*100)/100).toLocaleString();}
 
 //================= TABS =================
-const TABS=[{k:'camp',ic:'🥊',label:'Camp'},{k:'train',ic:'🏋️',label:'Train'},{k:'alarm',ic:'⏰',label:'Alarm'},{k:'cal',ic:'📅',label:'Agenda'},{k:'quests',ic:'🗡️',label:'Quests'},{k:'stats',ic:'📈',label:'Stats'},{k:'gold',ic:'💰',label:'Treasury'},{k:'mind',ic:'🧠',label:'Mind'}];
+const TABS=[{k:'camp',ic:'🥊',label:'Camp'},{k:'train',ic:'🏋️',label:'Train'},{k:'alarm',ic:'⏰',label:'Alarm'},{k:'cal',ic:'📅',label:'Agenda'},{k:'quests',ic:'🗡️',label:'Quests'},{k:'stats',ic:'📈',label:'Stats'},{k:'gold',ic:'💰',label:'Treasury'},{k:'mind',ic:'🧠',label:'Mind'},{k:'spirit',ic:'🕊️',label:'Spirit'}];
 let active='camp';
 function renderTabs(){
   document.getElementById('tabs').innerHTML=TABS.map(t=>`<button class="tab ${t.k===active?'on':''}" data-k="${t.k}"><span>${t.ic}</span>${t.label}</button>`).join('');
@@ -581,7 +612,7 @@ function renderTabs(){
 }
 function renderView(){
   const v=document.getElementById('view');v.classList.remove('view');void v.offsetWidth;v.classList.add('view');
-  v.innerHTML=({camp:viewCamp,train:viewTrain,alarm:viewAlarm,cal:viewCal,quests:viewQuests,stats:viewStats,gold:viewGold,mind:viewMind}[active])();
+  v.innerHTML=({camp:viewCamp,train:viewTrain,alarm:viewAlarm,cal:viewCal,quests:viewQuests,stats:viewStats,gold:viewGold,mind:viewMind,spirit:viewSpirit}[active])();
   bind[active]&&bind[active]();
 }
 
@@ -1178,6 +1209,12 @@ function viewMind(){
 
 //================= BINDINGS =================
 const bind={
+  spirit(){
+    const tl=document.getElementById('tlBtn'); if(tl)tl.onclick=()=>{const e=document.getElementById('ayahTL');const sh=e.style.display==='none';e.style.display=sh?'block':'none';tl.textContent=sh?'hide transliteration':'show transliteration';};
+    add('ayahReflect',()=>openSpiritReflect('Ayah — '+dayAyah().ref, dayAyah().prompt));
+    document.querySelectorAll('#view .segb').forEach(b=>b.onclick=()=>{spiritView=b.dataset.sv;renderView();});
+    document.querySelectorAll('#view .screading').forEach(el=>el.onclick=()=>openSpiritReading(el.dataset.kind,el.dataset.sid));
+  },
   camp(){
     document.querySelectorAll('#view .mq').forEach(el=>{
       const q=S.quests.find(x=>x.id===el.dataset.id);if(!q)return;
@@ -2026,6 +2063,149 @@ document.getElementById('csvFile').addEventListener('change',ev=>{const f=ev.tar
 
 // backup restore import
 document.getElementById('backupFile').addEventListener('change',ev=>{const f=ev.target.files[0];if(f)importData(f);ev.target.value='';});
+
+//================= SPIRIT =================
+const AYAT=[
+ {ref:"Al-‘Asr · 103:1–3",url:"https://quran.com/103",
+  ar:"وَالْعَصْرِ ۝ إِنَّ الْإِنسَانَ لَفِي خُسْرٍ ۝ إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ",
+  tl:"Wal-‘asr. Innal-insāna lafī khusr. Illal-ladhīna āmanū wa ‘amilus-sālihāti wa tawāsaw bil-haqqi wa tawāsaw bis-sabr.",
+  en:"By the declining day, Lo! man is in a state of loss, Save those who believe and do good works, and exhort one another to truth and exhort one another to endurance.",
+  prompt:"Where did your hours actually go today — and was any of it toward truth, or patience?"},
+ {ref:"Ash-Sharh · 94:5–6",url:"https://quran.com/94",
+  ar:"فَإِنَّ مَعَ الْعُسْرِ يُسْرًا ۝ إِنَّ مَعَ الْعُسْرِ يُسْرًا",
+  tl:"Fa-inna ma‘al-‘usri yusrā. Inna ma‘al-‘usri yusrā.",
+  en:"But lo! with hardship goeth ease, Lo! with hardship goeth ease.",
+  prompt:"What hardship are you in the middle of — and where might the ease already be hiding inside it?"},
+ {ref:"Ar-Ra‘d · 13:28",url:"https://quran.com/13/28",
+  ar:"الَّذِينَ آمَنُوا وَتَطْمَئِنُّ قُلُوبُهُم بِذِكْرِ اللَّهِ ۗ أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
+  tl:"Alladhīna āmanū wa tatma’innu qulūbuhum bidhikrillāh. Alā bidhikrillāhi tatma’innul-qulūb.",
+  en:"Who have believed and whose hearts have rest in the remembrance of Allah. Verily in the remembrance of Allah do hearts find rest!",
+  prompt:"When does your heart actually feel at rest? What pulls it back into noise?"},
+ {ref:"Az-Zumar · 39:53",url:"https://quran.com/39/53",
+  ar:"لَا تَقْنَطُوا مِن رَّحْمَةِ اللَّهِ ۚ إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا ۚ إِنَّهُ هُوَ الْغَفُورُ الرَّحِيمُ",
+  tl:"Lā taqnatū min rahmatillāh. Innallāha yaghfirudh-dhunūba jamī‘ā. Innahū huwal-ghafūrur-rahīm.",
+  en:"Despair not of the mercy of Allah, Who forgiveth all sins. Lo! He is the Forgiving, the Merciful.",
+  prompt:"Is there something you haven't forgiven yourself for? What would it mean to set it down?"},
+ {ref:"Al-Baqarah · 2:286",url:"https://quran.com/2/286",
+  ar:"لَا يُكَلِّفُ اللَّهُ نَفْسًا إِلَّا وُسْعَهَا",
+  tl:"Lā yukallifullāhu nafsan illā wus‘ahā.",
+  en:"Allah tasketh not a soul beyond its scope.",
+  prompt:"What are you carrying that was never actually yours to carry?"},
+ {ref:"Al-Ikhlās · 112",url:"https://quran.com/112",
+  ar:"قُلْ هُوَ اللَّهُ أَحَدٌ ۝ اللَّهُ الصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ",
+  tl:"Qul huwallāhu ahad. Allāhus-samad. Lam yalid wa lam yūlad. Wa lam yakul-lahū kufuwan ahad.",
+  en:"Say: He is Allah, the One! Allah, the eternally Besought of all! He begetteth not nor was begotten. And there is none comparable unto Him.",
+  prompt:"Sit with the idea of the One — what does it shrink, and what does it put in proportion?"},
+ {ref:"Al-Baqarah · 2:152",url:"https://quran.com/2/152",
+  ar:"فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ",
+  tl:"Fadhkurūnī adhkurkum washkurū lī wa lā takfurūn.",
+  en:"Therefore remember Me, I will remember you. Give thanks to Me, and reject not Me.",
+  prompt:"Name three things from today worth being grateful for, before the day blurs."},
+];
+const SPIRIT_ISLAM=[
+ {id:'hikma',title:'The House of Wisdom',sub:'History · Baghdad, 9th century',
+  body:`In Abbasid Baghdad there grew a centre of study later remembered as the House of Wisdom — Bayt al-Hikma. Scholars there gathered, translated and built upon the knowledge of the Greeks, Persians and Indians, at a time when much of that learning might otherwise have been lost.
+
+It was in this world that Muhammad ibn Mūsā al-Khwārizmī worked. From his name comes the word "algorithm," and from the title of his book, al-jabr, comes "algebra." Astronomy, medicine, optics and mathematics all advanced in these centuries.
+
+What's worth noticing is the spirit of it: the pursuit of knowledge treated not as a threat to faith but as part of a life well lived — curiosity as something close to devotion.`,
+  prompt:"What's one thing you're genuinely curious to understand — and when did you last make room for that?",
+  note:"A broad, widely-accepted sketch of history. For depth and detail, read proper historians and primary sources."},
+ {id:'pillars',title:'The Five Pillars',sub:'Knowledge · the foundations',
+  body:`The Five Pillars are the framework of practice in Islam: the shahada, the declaration of faith; salah, the five daily prayers; zakat, the giving of a portion of one's wealth to those in need; sawm, the fast of Ramadan; and hajj, the pilgrimage to Mecca, for those who are able, once in a lifetime.
+
+What's striking when you lay them out is their shape: belief, then rhythm, then generosity, then restraint, then journey. They move from the inward to the outward, and they return — every day, every year, once in a life.
+
+Each is simple to name and a lifetime to inhabit.`,
+  prompt:"Of these five movements — faith, rhythm, generosity, restraint, journey — which one feels most alive in you now, and which most neglected?"},
+ {id:'hijra',title:'The Hijra',sub:'History · 622 CE',
+  body:`In 622 CE the early Muslim community left Mecca, where they faced persecution, and migrated to the city of Yathrib — which became known as Medina. This journey, the Hijra, was significant enough that the Islamic calendar counts its years from it.
+
+The Hijra is remembered not just as an escape but as a beginning: in Medina a community was built, with agreements between different groups living side by side.
+
+There's a quiet lesson in starting the count of years not from a birth or a victory, but from the moment a people chose to leave comfort behind for the sake of something they believed in.`,
+  prompt:"What in your life would you date 'year one' from — the moment something truly began?"},
+ {id:'haytham',title:'Ibn al-Haytham & the experiment',sub:'History · the testing of ideas',
+  body:`Ibn al-Haytham, working around a thousand years ago, studied light and vision with an approach that feels strikingly modern: he insisted that claims be tested against careful observation rather than accepted on authority alone. For this, many credit him as an early pioneer of the experimental method.
+
+He wrote, in spirit, that the seeker after truth should doubt, question, and check — even the famous, even the ancient.
+
+There's something humbling in it: a man of deep faith treating honest doubt and patient testing as the proper road to understanding the world.`,
+  prompt:"Where in your life are you accepting something on authority that you've never actually tested for yourself?",
+  note:"A widely-held account; historians debate specifics. Treat it as inspiration to verify, not as settled detail."},
+];
+const SPIRIT_PHIL=[
+ {id:'control',title:'The dichotomy of control',sub:'Stoicism · Epictetus',
+  body:`Epictetus, born a slave and later a teacher, built much of his philosophy on a single distinction: some things are within our control, and most things are not. Our judgements, our efforts, our responses — ours. The weather, other people, the outcome, the past — not ours.
+
+Most suffering, he argued, comes from gripping tightly to the second category. Peace comes from pouring our energy into the first and loosening our grip on the rest.
+
+It's a clean idea, and like all clean ideas it's harder to live than to state. People also push back: is it too cold, too resigned? Where's the line between accepting what you can't change and giving up too early? Worth sitting with rather than settling.`,
+  prompt:"Name one thing eating at you right now. Which part of it is actually yours to move — and which part are you gripping for no reason?"},
+ {id:'memento',title:'Memento mori',sub:'A thread across traditions',
+  body:`"Remember that you will die." Stoics kept the thought close; so, in their own ways, do Sufis, Buddhists, and many faiths — including the Islamic remembrance of death as a counsel to live rightly.
+
+The point was never to be morbid. It was to sharpen life. When you remember the day is finite, the trivial loosens its grip and the important comes into focus. A petty argument shrinks. A person you love grows larger.
+
+Some find the thought frightening; others find it freeing. Both responses are honest. The invitation is only to let the fact of an ending make the middle matter more.`,
+  prompt:"If you truly took today as borrowed, what would you stop wasting energy on — and who would you treat more gently?"},
+ {id:'examined',title:'The examined life',sub:'Socrates · ancient Athens',
+  body:`On trial for his life, Socrates is remembered as saying that the unexamined life is not worth living. He spent his days asking people what they really meant by the words they used most confidently — justice, courage, goodness — and showing, gently and infuriatingly, how rarely they knew.
+
+His method wasn't to hand over answers. It was to ask better questions until your own thinking either deepened or revealed its cracks.
+
+You can disagree with him. Plenty have — perhaps an over-examined life forgets to actually be lived. But the core stands as a question worth your own answer: how much of what you believe have you ever really looked at?`,
+  prompt:"Pick one belief you hold strongly. Where did it actually come from — and have you ever tested it, or just inherited it?"},
+ {id:'meaning',title:'Meaning in the suffering',sub:'Viktor Frankl · logotherapy',
+  body:`Viktor Frankl survived the concentration camps and wrote that those who endured were often not the strongest, but those who held onto a why — a meaning, a person, a task waiting for them.
+
+He argued that we cannot always choose what happens to us, but we can choose the stance we take toward it — and that meaning is not handed to us but found, even in suffering, through what we do, what we love, and how we bear what we must.
+
+It's not a tidy promise that pain is "worth it." It's a harder, steadier claim: that even when you can't change the situation, you are still the one who decides what it will mean.`,
+  prompt:"What's a 'why' that has carried you through something hard — and is it still in front of you, or have you lost sight of it?"},
+];
+let spiritView='islam';
+function dayAyah(){ return AYAT[dayNum()%AYAT.length]; }
+function spiritDays(){ return new Set((S.spirit.notes||[]).map(n=>n.when)).size; }
+function viewSpirit(){
+  const a=dayAyah();
+  const list=spiritView==='islam'?SPIRIT_ISLAM:SPIRIT_PHIL;
+  const cards=list.map(p=>`<div class="screading" data-sid="${p.id}" data-kind="${spiritView}"><div class="srt">${esc(p.title)}</div><div class="srs">${esc(p.sub||'')}</div></div>`).join('');
+  const d=spiritDays();
+  const notes=(S.spirit.notes||[]).slice().reverse().slice(0,8).map(n=>`<div class="snote"><div class="sndt">${n.when} · ${esc(n.on)}</div><div class="sntx">${esc(n.text)}</div></div>`).join('')||'<div class="empty">Nothing yet. Write when something lands — it stays private, just for you.</div>';
+  return `
+  <div class="card spirit-intro"><div class="sintro">A space away from the scoreboard. Nothing to win here — only to notice, question, and sit with. Take what speaks to you; leave the rest.</div></div>
+  <div class="card ayah-card">
+    <div class="ayah-ref">${esc(a.ref)}</div>
+    <div class="ayah-ar" dir="rtl" lang="ar">${esc(a.ar)}</div>
+    <div class="ayah-tl" id="ayahTL" style="display:none">${esc(a.tl)}</div>
+    <div class="ayah-en">${esc(a.en)}</div>
+    <div class="ayah-actions"><button class="sbtn" id="tlBtn">show transliteration</button><a class="sbtn" href="${a.url}" target="_blank" rel="noopener">verify on Quran.com ↗</a></div>
+    <div class="ayah-src">English: Pickthall (public domain)</div>
+    <button class="btn sober" id="ayahReflect">Reflect on this</button>
+  </div>
+  <div class="seg">
+    <button class="segb ${spiritView==='islam'?'on':''}" data-sv="islam">☪ Islam</button>
+    <button class="segb ${spiritView==='phil'?'on':''}" data-sv="phil">🌍 Philosophy</button>
+  </div>
+  <div class="card"><h2 class="sober-h">${spiritView==='islam'?'Knowledge & history':'Ideas to sit with'}</h2>${cards}</div>
+  <div class="card"><h2 class="sober-h">Reflections <span class="sdays">${d} day${d===1?'':'s'}</span></h2>${notes}</div>
+  <div class="hint sdisc">A companion for learning and reflection — not a religious authority, and not a substitute for scholars. Islamic content is kept to widely-agreed, mainstream knowledge; please verify with teachers and primary sources, and tell me of any error. Where understandings differ, that is noted. Philosophy here offers questions, never one answer.</div>`;
+}
+function openSpiritReading(kind,sid){
+  const list=kind==='islam'?SPIRIT_ISLAM:SPIRIT_PHIL;
+  const p=list.find(x=>x.id===sid); if(!p)return;
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="srkicker">${esc(p.sub||'')}</div><div class="srtitle">${esc(p.title)}</div><div class="srbody">${p.body.split('\n\n').map(x=>`<p>${esc(x)}</p>`).join('')}</div>${p.note?`<div class="hint">${esc(p.note)}</div>`:''}<div class="field" style="margin-top:14px"><button class="btn sober block" id="srReflect">Reflect on this</button></div><div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('srReflect').onclick=()=>openSpiritReflect(p.title,p.prompt);
+}
+function openSpiritReflect(on,prompt){
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="srkicker">Reflection</div><div class="srprompt">${esc(prompt||'What stays with you?')}</div><textarea id="srText" placeholder="Write freely. This is private, and just for you." style="margin-top:10px;min-height:130px"></textarea><div class="field" style="margin-top:10px"><button class="btn sober block" id="srSave">Save reflection</button></div><div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('srSave').onclick=()=>{const t=document.getElementById('srText').value.trim();if(!t)return;S.spirit.notes=S.spirit.notes||[];S.spirit.notes.push({id:id(),when:today(),on,text:t});save();closeModal();if(active==='spirit')renderView();toast('Saved to your reflections');};
+}
 
 //================= PWA =================
 let deferredPrompt=null;
