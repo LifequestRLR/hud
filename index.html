@@ -527,20 +527,24 @@ const DEFAULT={
   ledger:[], balance:0, savings:{name:"Emergency fund",target:1000,saved:0,log:[]}, asOf:{daily:'',sav:''}, spirit:{notes:[]}, journal:[], wakeTime:"07:00",
   mind:{mp:0, subj:{tech:0,psych:0}, srs:{}, library:[], reading:{}, generated:[]},
   backend:{url:'', key:''},
+  sync:{phrase:'', last:0},
   events:[], // imported calendar
   alarm:{wakeBy:"07:00", workStart:"", workEnd:""},
 };
 
 let S=structuredClone(DEFAULT), booted=false, saveT;
+function normalizeState(){
+  if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
+  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
+  S.backend=S.backend||{url:'',key:''};
+  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
+  S.sync=S.sync||{phrase:'',last:0};
+}
 async function load(){
   try{ if(navigator.storage && navigator.storage.persist){ await navigator.storage.persist(); } }catch(e){}
   const raw=await store.get(KEY);
   if(raw){try{S=Object.assign(structuredClone(DEFAULT),JSON.parse(raw));}catch(e){}}
-  // seed upcoming events on first run
-  if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
-  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
-      S.backend=S.backend||{url:'',key:''};
-  S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
+  normalizeState();
   rolloverDay(); booted=true; renderAll();
 }
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>store.set(KEY,JSON.stringify(S,(k,v)=>k.charAt(0)==='_'?undefined:v)),250);}
@@ -562,10 +566,8 @@ function importData(file){
       const data=JSON.parse(r.result);
       if(!data||typeof data!=='object'||!('totalXp' in data||'metrics' in data||'savings' in data)) throw 0;
       S=Object.assign(structuredClone(DEFAULT),data);
+      normalizeState();
       save();
-      S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
-      S.backend=S.backend||{url:'',key:''};
-      S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
       renderAll();
       toast('✓ Backup restored');
     }catch(e){toast('Not a valid backup file');}
@@ -680,6 +682,15 @@ function viewCamp(){
     <div class="info" style="margin:0 0 10px">Your progress is saved on this phone and survives app updates. For total safety — a new phone, or anything unexpected — save a backup file now and then, and restore it anytime.</div>
     <div class="field"><button class="btn ghost sm" id="dataExport">💾 Save backup</button><button class="btn ghost sm" id="dataImport">📂 Restore backup</button></div>
     <div class="hint">The backup is a file on your device. It's never uploaded anywhere.</div>
+  </div>
+  <div class="card">
+    <h2>☁ Sync across devices <span class="n">${syncReady()?'on':'off'}</span></h2>
+    <div class="info" style="margin:0 0 10px">Keep your phone and tablet in step. Your data is <b>encrypted on this device</b> with your sync phrase before it's uploaded — the server only ever sees a locked blob. Push from the device you just used; pull on the other.</div>
+    ${backendOn()?`
+      <div class="field"><button class="btn ghost sm" id="syncPushBtn">☁↑ Push to cloud</button><button class="btn ghost sm" id="syncPullBtn">☁↓ Pull to this device</button></div>
+      <div class="field"><button class="btn ghost sm" id="syncCfg">⚙ Sync phrase${S.sync&&S.sync.phrase?' ✓':''}</button></div>
+      ${S.sync&&S.sync.last?`<div class="hint">Last cloud update: ${esc(new Date(S.sync.last).toLocaleString())}</div>`:`<div class="hint">${S.sync&&S.sync.phrase?'Phrase set. Push from your main device to start.':'Set a sync phrase to begin (same phrase on both devices).'}</div>`}
+    `:`<div class="hint">Sync uses your AI backend connection. Set that up first in <b>Mind → ⚙ AI settings</b>, then sync appears here.</div>`}
   </div>`;
 }
 
@@ -1243,6 +1254,7 @@ const bind={
     add('mqAdd',()=>{const t=val('mqTitle');if(!t)return;S.quests.push({id:id(),title:t,cur:0,target:Math.max(1,+val('mqTarget')||10),tag:'fight'});save();renderView();});
     add('dataExport',exportData);
     const di=document.getElementById('dataImport'); if(di)di.onclick=()=>document.getElementById('backupFile').click();
+    add('syncPushBtn',syncPush); add('syncPullBtn',syncPull); add('syncCfg',openSyncSettings);
   },
   train(){
     if(S.session){
@@ -2304,6 +2316,70 @@ function openSpiritReflect(on,prompt){
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
   document.getElementById('srSave').onclick=()=>{const t=document.getElementById('srText').value.trim();if(!t)return;S.spirit.notes=S.spirit.notes||[];S.spirit.notes.push({id:id(),when:today(),on,text:t});save();closeModal();if(active==='spirit')renderView();toast('Saved to your reflections');};
+}
+
+//================= ENCRYPTED CROSS-DEVICE SYNC =================
+const _b64=buf=>btoa(String.fromCharCode(...new Uint8Array(buf)));
+const _unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function _syncKeyHash(phrase){const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('lifequest-sync:'+phrase));return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+async function _deriveAes(phrase,salt){const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(phrase),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+async function _encBlob(phrase,obj){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));const key=await _deriveAes(phrase,salt);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(obj)));return {v:1,salt:_b64(salt),iv:_b64(iv),ct:_b64(ct)};}
+async function _decBlob(phrase,p){const key=await _deriveAes(phrase,_unb64(p.salt));const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_unb64(p.iv)},key,_unb64(p.ct));return JSON.parse(new TextDecoder().decode(pt));}
+function syncReady(){ return backendOn() && S.sync && S.sync.phrase; }
+async function syncPush(){
+  if(!backendOn()){toast('Set up the backend first (Mind → ⚙ AI settings)');return;}
+  const phrase=(S.sync&&S.sync.phrase||'').trim(); if(!phrase){openSyncSettings();return;}
+  toast('☁ Encrypting & pushing…');
+  try{
+    const obj=JSON.parse(JSON.stringify(S,(k,v)=>k==='sync'||k.charAt(0)==='_'?undefined:v));
+    const payload=await _encBlob(phrase,obj);
+    const key=await _syncKeyHash(phrase);
+    const r=await fetch(S.backend.url.replace(/\/+$/,'')+'/sync/push',{method:'POST',headers:{'Content-Type':'application/json','X-Access-Key':S.backend.key},body:JSON.stringify({key,payload,updatedAt:Date.now()})});
+    const d=await r.json(); if(!r.ok||!d.ok)throw 0;
+    S.sync.last=d.updatedAt; save(); if(active==='camp')renderView();
+    toast('☁ Pushed — encrypted, only your phrase can open it');
+  }catch(e){ toast('Push failed — check connection and AI settings'); }
+}
+async function syncPull(){
+  if(!backendOn()){toast('Set up the backend first');return;}
+  const phrase=(S.sync&&S.sync.phrase||'').trim(); if(!phrase){openSyncSettings();return;}
+  let d;
+  try{
+    const key=await _syncKeyHash(phrase);
+    const r=await fetch(S.backend.url.replace(/\/+$/,'')+'/sync/pull?key='+key,{headers:{'X-Access-Key':S.backend.key}});
+    d=await r.json();
+  }catch(e){ toast('Pull failed — check your connection'); return; }
+  if(!d||d.empty){ toast('Nothing in the cloud yet — push from your main device first'); return; }
+  let obj;
+  try{ obj=await _decBlob(phrase,d.payload); }
+  catch(e){ toast('Could not decrypt — the sync phrase must match your other device exactly'); return; }
+  const when=d.updatedAt?new Date(d.updatedAt).toLocaleString():'an unknown time';
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">☁ Pull from cloud</div>
+    <div class="lesson" style="font-size:13px">This replaces <b>everything on this device</b> with the cloud copy from <b>${esc(when)}</b>. Anything logged here since the last push will be lost. Continue?</div>
+    <div class="field" style="margin-top:12px"><button class="btn block" id="pullGo">Replace this device with cloud copy</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Cancel</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('pullGo').onclick=()=>{
+    const keepSync=S.sync;
+    S=Object.assign(structuredClone(DEFAULT),obj);
+    S.sync=keepSync; if(d.updatedAt)S.sync.last=d.updatedAt;
+    normalizeState(); save(); closeModal(); renderAll();
+    toast('☁ Pulled — this device now matches the cloud');
+  };
+}
+function openSyncSettings(){
+  const s=S.sync||{phrase:''};
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">☁ Sync settings</div>
+    <div class="lesson" style="font-size:13px">Set one secret <b>sync phrase</b>, and enter the exact same phrase on your other device. Your data is encrypted with it <b>before it ever leaves the device</b> — no one, not even the server, can read it. Pick something long and unique. <b>Don't lose it:</b> without the phrase, the cloud copy can't be unlocked.</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:12px">Sync phrase</div>
+    <input id="syncPhrase" placeholder="four random words you'll remember" value="${esc(s.phrase||'')}" style="width:100%;margin-top:4px">
+    <div class="field" style="margin-top:12px"><button class="btn block" id="syncSave">Save phrase</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>
+    <div class="hint">Uses your existing Worker + KV. Sync is free and doesn't touch your AI daily limit.</div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('syncSave').onclick=()=>{S.sync=S.sync||{};S.sync.phrase=val('syncPhrase').trim();save();closeModal();renderView();toast(S.sync.phrase?'Sync phrase saved':'Sync phrase cleared');};
 }
 
 //================= PWA =================
