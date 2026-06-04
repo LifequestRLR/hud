@@ -294,6 +294,10 @@
   .reader-top .rtitle{flex:1;font-family:'Chakra Petch';font-size:15px;color:#f3ead2}
   .reader-page{flex:1;overflow-y:auto;padding:20px 22px;font-family:'Sora';font-size:16.5px;line-height:1.72;color:#e7e2d3;max-width:680px;margin:0 auto;width:100%}
   .reader-foot{padding:12px 18px 0;border-top:1px solid #2a2a1f;max-width:680px;margin:0 auto;width:100%}
+  .rlike{background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;padding:0 6px;line-height:1}
+  .rlike.on{color:#e0607a}
+  .rdeeper{display:block;width:100%;margin:12px 0 2px;padding:12px;border:1px solid var(--cyan-dim);background:rgba(70,214,200,.06);color:var(--cyan);border-radius:11px;font-family:'Chakra Petch';font-size:13.5px;letter-spacing:.03em;cursor:pointer}
+  .rdeeper:disabled{opacity:.5;cursor:default}
   .goalbar .gtxt{font-family:'JetBrains Mono';font-size:10.5px;color:var(--gold)}
   .goalbar .gb{height:6px;border-radius:4px;background:#0c0f18;border:1px solid #2a2a1f;margin-top:5px;overflow:hidden}
   .goalbar .gb>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));border-radius:4px;transition:width .4s}
@@ -398,11 +402,12 @@
   <div class="player-ctrls"><button class="pc-pause" id="pPause">Pause</button><button class="pc-skip" id="pSkip">Skip →</button></div>
 </div>
 <div class="reader" id="reader">
-  <div class="reader-top"><span class="rtitle" id="rTitle"></span><button class="pquit" id="rClose">✕</button></div>
+  <div class="reader-top"><span class="rtitle" id="rTitle"></span><button class="rlike" id="rLike" title="Like">♡</button><button class="pquit" id="rClose">✕</button></div>
   <div class="reader-page" id="rPage"></div>
   <div class="reader-foot">
     <div class="goalbar"><span class="gtxt" id="rGoalTxt"></span><div class="gb"><i id="rGoalBar"></i></div></div>
     <div class="reader-nav"><button class="rnav" id="rPrev">‹ Prev</button><span class="rpnum" id="rPageNum"></span><button class="rnav" id="rNext">Next ›</button></div>
+    <button class="rdeeper" id="rDeeper" style="display:none">✨ Go deeper into this</button>
   </div>
 </div>
 <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
@@ -1189,7 +1194,7 @@ function viewMind(){
   else coachHtml=`<div class="mlbl2">🧭 Coach — ${esc(pick.reason)}</div><button class="btn block" id="mReflect">💭 Reflect on something</button>`;
   const entries=S.journal.slice().reverse().slice(0,8).map(j=>`<div class="entry"><div class="dt">${j.when}</div><div class="tx">${esc(j.text)}</div></div>`).join('')||`<div class="empty">No reflections yet.</div>`;
   const books=allBooks();
-  const libHtml=books.map(b=>{const pages=bookPages(b).length;const pr=readingProg(b.id);const pct=Math.round((pr.furthest+1)/pages*100);const sub=SUBJECTS.find(s=>s.key===b.subject);const status=pr.finished?'<span style="color:var(--green)">✓ finished</span>':`p.${pr.mark+1}/${pages}`;return `<div class="bookrow${pr.finished?' bdone':''}" data-bid="${b.id}"><div class="brtop"><span class="brt">${esc(b.title)}</span><span class="brs">${sub?sub.icon:''} ${status}</span></div><div class="brbar"><i style="width:${pct}%"></i></div></div>`;}).join('');
+  const libHtml=books.map(b=>{const pages=bookPages(b).length;const pr=readingProg(b.id);const pct=Math.round((pr.furthest+1)/pages*100);const sub=SUBJECTS.find(s=>s.key===b.subject);const status=pr.finished?'<span style="color:var(--green)">✓ finished</span>':`p.${pr.mark+1}/${pages}`;const heart=pr.liked?'<span style="color:#e0607a">♥</span> ':'';return `<div class="bookrow${pr.finished?' bdone':''}" data-bid="${b.id}"><div class="brtop"><span class="brt">${heart}${esc(b.title)}</span><span class="brs">${sub?sub.icon:''} ${status}</span></div><div class="brbar"><i style="width:${pct}%"></i></div></div>`;}).join('');
   return `
   <div class="card"><h2>🧠 Mind <span class="n">${m.mp} MP · ${due} due</span></h2>${tracks}
     <div class="hint">Each track levels up as you earn Mind Points. Concepts you pass come back for spaced review — that's what makes knowledge stick.</div></div>
@@ -2010,6 +2015,7 @@ function readingProg(id){
   if(pr.furthest===undefined)pr.furthest=pr.mark||0;
   if(pr.claimed===undefined)pr.claimed=0;
   if(pr.finished===undefined)pr.finished=false;
+  if(pr.liked===undefined)pr.liked=false;
   return pr;
 }
 const MP_PER_PAGE=5, FINISH_BONUS=20;
@@ -2029,6 +2035,30 @@ function openReader(id){ _rBook=id; readingProg(id); document.getElementById('re
   document.getElementById('rClose').onclick=()=>document.getElementById('reader').classList.remove('show');
   document.getElementById('rPrev').onclick=()=>readerNav(-1);
   document.getElementById('rNext').onclick=()=>readerNav(1);
+  document.getElementById('rLike').onclick=()=>{const pr=readingProg(_rBook);pr.liked=!pr.liked;save();renderReaderPage();toast(pr.liked?'♥ Liked — saved to your shelf':'Removed like');};
+  document.getElementById('rDeeper').onclick=()=>deepenBook(_rBook);
+}
+async function deepenBook(id){
+  if(!backendOn()){openAISettings();return;}
+  const b=bookById(id); if(!b)return;
+  const dp=document.getElementById('rDeeper'); if(dp){dp.disabled=true;dp.textContent='Going deeper…';}
+  try{
+    const intro=(bookPages(b)[0]||'').slice(0,800);
+    const base=b.title.replace(/ — deeper.*$/,'');
+    const res=await backendCall('/deepen',{topic:base,seen:intro});
+    const text=(res.raw||'').trim();
+    if(!text||text.length<80) throw {kind:'badresp'};
+    const n=(S.mind.library||[]).filter(x=>x.title&&x.title.indexOf(base+' — deeper')===0).length;
+    const title=base+' — deeper'+(n?(' '+(n+1)):'');
+    const nb={id:'bk_'+Math.random().toString(36).slice(2,8),title,subject:b.subject,text,generated:true};
+    S.mind.library=S.mind.library||[]; S.mind.library.push(nb);
+    readingProg(nb.id).liked=true; save();
+    openReader(nb.id);
+    toast('✨ A deeper take — enjoy');
+  }catch(e){
+    if(dp){dp.disabled=false;dp.textContent='✨ Go deeper into this';}
+    toast(aiErrMsg(e));
+  }
 }
 function renderReaderPage(){
   const b=bookById(_rBook); const pages=bookPages(b); const pr=readingProg(_rBook);
@@ -2042,6 +2072,8 @@ function renderReaderPage(){
   document.getElementById('rGoalTxt').textContent=pr.finished?`✓ Finished · ${pr.claimed*MP_PER_PAGE+FINISH_BONUS} MP earned — kept for review`:`Progress ${pct}% · +${MP_PER_PAGE} MP per new page`;
   document.getElementById('rPrev').disabled=pr.mark<=0;
   document.getElementById('rNext').disabled=pr.mark>=pages.length-1;
+  const lk=document.getElementById('rLike'); if(lk){lk.textContent=pr.liked?'♥':'♡';lk.classList.toggle('on',!!pr.liked);}
+  const dp=document.getElementById('rDeeper'); if(dp){dp.style.display=backendOn()?'block':'none';dp.disabled=false;dp.textContent='✨ Go deeper into this';}
   document.getElementById('rPage').scrollTop=0;
   save();
   if(res.finishedNow)toast(`📗 ${b.title} finished · +${FINISH_BONUS} MP bonus!`);
@@ -2116,14 +2148,20 @@ const AYAT=[
   prompt:"Name three things from today worth being grateful for, before the day blurs."},
 ];
 const SPIRIT_ISLAM=[
- {id:'hikma',title:'The House of Wisdom',sub:'History · Baghdad, 9th century',
-  body:`In Abbasid Baghdad there grew a centre of study later remembered as the House of Wisdom — Bayt al-Hikma. Scholars there gathered, translated and built upon the knowledge of the Greeks, Persians and Indians, at a time when much of that learning might otherwise have been lost.
+ {id:'hikma',title:'The House of Wisdom',sub:'History · Baghdad, 8th–9th century',
+  body:`In Abbasid Baghdad there grew a centre of study later remembered as the House of Wisdom — Bayt al-Hikma. Under caliphs such as al-Mansur, Harun al-Rashid and especially al-Ma'mun, it became the heart of a vast translation movement: scholars gathered, translated and built upon the knowledge of the Greeks, Persians and Indians, at a time when much of that learning might otherwise have been scattered or lost.
 
-It was in this world that Muhammad ibn Mūsā al-Khwārizmī worked. From his name comes the word "algorithm," and from the title of his book, al-jabr, comes "algebra." Astronomy, medicine, optics and mathematics all advanced in these centuries.
+The translation effort was deliberate and well-funded. Works of Aristotle, Euclid, Ptolemy and Galen were rendered into Arabic, often by way of Syriac, by translators of many faiths — Muslims, Christians and others working side by side. One of the most celebrated, Hunayn ibn Ishaq, a Christian physician, set careful standards for translation that raised the quality of the whole enterprise. Knowledge was treated as something to be sought wherever it could be found.
 
-What's worth noticing is the spirit of it: the pursuit of knowledge treated not as a threat to faith but as part of a life well lived — curiosity as something close to devotion.`,
-  prompt:"What's one thing you're genuinely curious to understand — and when did you last make room for that?",
-  note:"A broad, widely-accepted sketch of history. For depth and detail, read proper historians and primary sources."},
+It helped that the technology of the book was changing. Paper-making, learned from the east, spread through the Islamic world and made the copying of texts far cheaper than parchment ever allowed. Baghdad's book markets and libraries grew, and learning spread with them.
+
+It was in this world that Muhammad ibn Musa al-Khwarizmi worked. From his name comes the word "algorithm," and from the title of his book, al-jabr, comes "algebra." Around him worked others whose names still echo: al-Kindi, who wrote on philosophy, medicine and cryptography; and later thinkers across the Islamic world who advanced astronomy, optics, chemistry and medicine for centuries.
+
+It would be too simple to imagine an unbroken golden age — there were rivalries, political upheavals, and later periods of decline and destruction, including the sack of Baghdad in 1258. Historians still debate how formal an "institution" the House of Wisdom really was, versus a broader culture of patronage and scholarship. The romantic image and the careful history don't always match perfectly.
+
+But the deeper thread holds, and it's worth sitting with: for a long, bright stretch, the pursuit of knowledge was treated not as a threat to faith but as part of a life well lived — curiosity as something close to devotion, and the wisdom of other peoples as something to honour rather than fear.`,
+  prompt:"What's one thing you're genuinely curious to understand — and when did you last make real room for that, with no goal but the knowing?",
+  note:"A broad, widely-accepted sketch of history; specifics are debated by scholars. For depth, read proper historians and primary sources."},
  {id:'pillars',title:'The Five Pillars',sub:'Knowledge · the foundations',
   body:`The Five Pillars are the framework of practice in Islam: the shahada, the declaration of faith; salah, the five daily prayers; zakat, the giving of a portion of one's wealth to those in need; sawm, the fast of Ramadan; and hajj, the pilgrimage to Mecca, for those who are able, once in a lifetime.
 
