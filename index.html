@@ -312,6 +312,8 @@
   .acct:active{transform:scale(.97)}
   .acct .aic{font-size:15px}
   .acct .abal{font-family:'Chakra Petch';font-size:17px;font-weight:700;color:var(--ink)}
+  .masked{filter:blur(8px);user-select:none;transition:filter .18s}
+  .eyebtn{flex:0 0 auto !important;min-width:0;padding:9px 12px;font-size:16px}
   .acct .alab{font-size:8.5px;letter-spacing:.14em;color:var(--muted)}
   .accrow{display:flex;gap:10px}
   .accbox{flex:1;text-align:center;border:1px solid var(--line);border-radius:12px;background:var(--panel2);padding:13px 6px}
@@ -597,13 +599,14 @@ function renderHud(){
         <div class="sub"><span class="streak">🔥 ${S.streak}d</span><span>·</span><span class="clock">${dateStr} · ${clock}</span><span>·</span><span style="color:var(--gold)">🎯 ${daysToFight()}d to target</span><button class="installpill" id="installBtn">Install</button></div></div></div>
     <div class="xpbar"><div class="meta"><span>XP ${L.into}/${L.need}</span><span>TOTAL ${S.totalXp}</span></div><div class="track"><div class="fill" style="width:${L.pct}%"></div></div></div>
     <div class="stats">${chip('🫁','VO2MAX',(lastV('m_vo2')??'–'))}${chip('💪','PULL/DIP',(lastV('m_pull')??'–')+'/'+(lastV('m_dip')??'–'))}${chip('⚖️','WEIGHT',(lastV('m_bw')??'79.6')+'kg')}${chip('🥊','SESSIONS',S.sessions.length)}</div>
-    <div class="accts"><button class="acct" id="acctDaily"><span class="aic">💳</span><span class="abal">€${fmt(S.balance)}</span><span class="alab">DAILY</span></button><button class="acct" id="acctSav"><span class="aic">🏦</span><span class="abal">€${fmt(S.savings.saved)}</span><span class="alab">SAVINGS</span></button></div>`;
+    <div class="accts"><button class="acct" id="acctDaily"><span class="aic">💳</span><span class="abal${_showBal?'':' masked'}">€${fmt(S.balance)}</span><span class="alab">DAILY</span></button><button class="acct" id="acctSav"><span class="aic">🏦</span><span class="abal${_showBal?'':' masked'}">€${fmt(S.savings.saved)}</span><span class="alab">SAVINGS</span></button><button class="acct eyebtn" id="balEye" title="Show/hide balances">${_showBal?'🙈':'👁'}</button></div>`;
   const ne=document.getElementById('nameEdit');
   ne.addEventListener('blur',()=>{S.name=ne.textContent.trim()||"Bilal";save();});
   ne.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ne.blur();}});
   if(deferredPrompt){const b=document.getElementById('installBtn');if(b)b.style.display='inline-block';}
   const ib=document.getElementById('installBtn');if(ib)ib.onclick=doInstall;
   ['acctDaily','acctSav'].forEach(i=>{const e=document.getElementById(i);if(e)e.onclick=()=>{active='gold';renderTabs();renderView();};});
+  const be=document.getElementById('balEye'); if(be)be.onclick=()=>{_showBal=!_showBal;renderHud();if(active==='gold')renderView();};
 }
 function chip(ic,l,v){return `<div class="stat"><div class="ic">${ic}</div><div class="v">${v}</div><div class="l">${l}</div></div>`;}
 function lastV(mid){const m=S.metrics.find(x=>x.id===mid);return m&&m.log.length?m.log[m.log.length-1].v:null;}
@@ -612,6 +615,7 @@ function fmt(n){return (Math.round(n*100)/100).toLocaleString();}
 //================= TABS =================
 const TABS=[{k:'camp',ic:'🥊',label:'Camp'},{k:'train',ic:'🏋️',label:'Train'},{k:'alarm',ic:'⏰',label:'Alarm'},{k:'cal',ic:'📅',label:'Agenda'},{k:'quests',ic:'🗡️',label:'Quests'},{k:'stats',ic:'📈',label:'Stats'},{k:'gold',ic:'💰',label:'Treasury'},{k:'mind',ic:'🧠',label:'Mind'},{k:'spirit',ic:'🕊️',label:'Spirit'}];
 let active='camp';
+let _showBal=false;
 function renderTabs(){
   const tb=document.getElementById('tabs');
   tb.innerHTML=TABS.map(t=>`<button class="tab ${t.k===active?'on':''}" data-k="${t.k}"><span>${t.ic}</span>${t.label}</button>`).join('');
@@ -1134,8 +1138,8 @@ function viewGold(){
   const remaining=Math.max(0,s.target-s.saved), defeated=s.target>0&&s.saved>=s.target;
   const acctCard=`<div class="card"><h2>🏦 Accounts <span class="n" id="editBal" style="cursor:pointer;color:var(--cyan)">set balances</span></h2>
     <div class="accrow">
-      <div class="accbox"><div class="accic">💳</div><div class="accbal">€${fmt(S.balance)}</div><div class="acclab">Daily</div></div>
-      <div class="accbox"><div class="accic">🏦</div><div class="accbal">€${fmt(s.saved)}</div><div class="acclab">Savings</div></div>
+      <div class="accbox"><div class="accic">💳</div><div class="accbal${_showBal?'':' masked'}">€${fmt(S.balance)}</div><div class="acclab">Daily</div></div>
+      <div class="accbox"><div class="accic">🏦</div><div class="accbal${_showBal?'':' masked'}">€${fmt(s.saved)}</div><div class="acclab">Savings</div></div>
     </div>
     <div class="field" style="margin-top:12px"><input id="xferAmt" type="number" step="0.01" placeholder="Transfer amount (€)" class="grow"></div>
     <div class="field"><button class="btn" id="toSav">💳→🏦 To savings</button><button class="btn ghost" id="toDaily">🏦→💳 To daily</button></div>
@@ -1146,7 +1150,7 @@ function viewGold(){
     <div class="bosslbl">🐉 Savings Boss</div>
     <div class="bossname">${esc(s.name||'Set your goal')}</div>
     <div class="bosshp"><i style="width:${pctSaved}%"></i></div>
-    <div class="bossmeta"><span>€${fmt(s.saved)} / €${fmt(s.target)}</span><span>${defeated?'DEFEATED 🏆':pctSaved+'% · €'+fmt(remaining)+' to go'}</span></div>
+    <div class="bossmeta"><span class="${_showBal?'':'masked'}">€${fmt(s.saved)} / €${fmt(s.target)}</span><span>${defeated?'DEFEATED 🏆':pctSaved+'% · '+(_showBal?'€'+fmt(remaining)+' to go':'to go')}</span></div>
     ${defeated?`<button class="btn block" id="newBoss" style="margin-top:12px">🏆 Set a bigger goal</button>`:''}
     <div class="hint">${m.savedCount?`Fed the boss ${m.savedCount}× this month — that's the habit working.`:'Transfer to savings above to chip it down.'} · <span id="editGoal" style="color:var(--cyan);cursor:pointer">edit goal</span></div>
   </div>`;
@@ -1169,7 +1173,7 @@ function viewGold(){
   </div>`;
   const cats=(backendOn()?`<option value="auto">✨ Auto-categorize</option>`:'')+CATS.map(c=>`<option value="${c.k}">${c.ic} ${c.label}</option>`).join('');
   const rows=S.ledger.slice().reverse().slice(0,30).map(t=>{const c=catBy(t.cat);return `<div class="lrow" data-tid="${t.id}" style="cursor:pointer"><span class="lic">${c.ic}</span><div class="lbody"><div class="ld">${esc(t.desc||c.label)}</div><div class="ldt">${t.day} · ${esc(c.label)} · edit</div></div><div class="lamt ${t.amt>=0?'pos':'neg'}">${t.amt>=0?'+':'−'}€${fmt(Math.abs(t.amt))}</div></div>`;}).join('')||'<div class="empty">No transactions yet.</div>';
-  const add=`<div class="card"><h2>➕ Log Transaction <span class="n">Daily €${fmt(S.balance)}</span></h2>
+  const add=`<div class="card"><h2>➕ Log Transaction <span class="n">Daily <span class="${_showBal?'':'masked'}">€${fmt(S.balance)}</span> · <span id="balEye2" style="cursor:pointer">${_showBal?'🙈 hide':'👁 show'}</span></span></h2>
     <div class="field"><input id="txDesc" class="grow" placeholder="What was it?"><input id="txAmt" type="number" step="0.01" placeholder="€" style="width:88px"></div>
     <div class="field"><select id="txCat" class="grow">${cats}</select><button class="btn" id="txAdd">Add</button></div>
     <div class="ledger" style="margin-top:12px">${rows}</div>
@@ -1290,6 +1294,7 @@ const bind={
     const eb=document.getElementById('editBal'); if(eb)eb.onclick=openBalanceEdit;
     add('aiCoachBtn',aiMoneyCoach);
     add('impOpen',openImport);
+    const be2=document.getElementById('balEye2'); if(be2)be2.onclick=()=>{_showBal=!_showBal;renderHud();renderView();};
     document.querySelectorAll('#view .lrow[data-tid]').forEach(el=>el.onclick=()=>openTxEdit(el.dataset.tid));
   },
   mind(){
