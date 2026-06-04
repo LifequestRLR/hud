@@ -186,6 +186,22 @@
   .reward-box .rt{font-size:13.5px;line-height:1.55;color:#e8ecf7;margin-top:6px}
   .sbinfo{font-size:13px;line-height:1.6;color:#d7dbe4;margin:10px 0;padding-left:11px;border-left:2px solid var(--cyan-dim)}
   .sbinfo b{color:var(--ink)}
+  /* heart rate */
+  .hrsec{border:1px solid #5e2a30;border-radius:12px;background:linear-gradient(160deg,rgba(239,95,107,.08),var(--panel2));padding:13px;margin:12px 0}
+  .hrhead{font-family:'Chakra Petch';font-size:14px;color:#ff8a93;margin-bottom:8px}
+  .hrhead .n{float:right;font-family:'JetBrains Mono';font-size:10px;color:var(--muted);font-weight:400}
+  .hrlive{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
+  .hrbig{font-family:'Chakra Petch';font-size:40px;font-weight:700;color:#ef5f6b;line-height:1}
+  .hrbig .hru{font-size:14px;color:var(--muted);margin-left:4px}
+  .hrzone{font-family:'Chakra Petch';font-size:15px;font-weight:600}
+  .hrchart{width:100%;height:auto;display:block;background:#0c0f18;border:1px solid var(--line);border-radius:9px}
+  .hrchart .hrax{font-family:'JetBrains Mono';font-size:7px;fill:var(--faint)}
+  .hrempty{font-family:'JetBrains Mono';font-size:11px;color:var(--muted);text-align:center;padding:24px 0;background:#0c0f18;border:1px solid var(--line);border-radius:9px}
+  .hrchart-wrap{margin-top:4px}
+  .q.hashr{cursor:pointer}
+  .zrow{display:flex;justify-content:space-between;padding:6px 2px;border-bottom:1px solid var(--line)}
+  .zrow .zlab{font-family:'Chakra Petch';font-size:13px}
+  .zrow .ztime{font-family:'JetBrains Mono';font-size:13px;color:var(--ink)}
   .modal .mexs{font-family:'Chakra Petch';font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 
   /* GUIDED PLAYER */
@@ -693,7 +709,7 @@ function viewTrain(){
     <div class="hint">Consistency is your biggest weapon. 80% steady &gt; occasional war. Not every session has to destroy you.</div></div>
   <div class="card"><h2>🗂️ Phases <span class="n">${S.programs.length}</span></h2>${S.programs.map(programBlock).join('')}</div>
   <div class="card"><h2>📜 Session History <span class="n">${S.sessions.length}</span></h2>
-    ${S.sessions.length?S.sessions.slice().reverse().slice(0,12).map(s=>`<div class="q"><div class="qbody"><div class="qt">${esc(s.name)}</div><div class="qmeta"><span class="mono" style="color:var(--cyan)">${s.day}</span><span>${s.count} logged</span>${s.note?`<span style="color:var(--muted)">“${esc(s.note)}”</span>`:''}</div></div></div>`).join(''):`<div class="empty">No sessions yet. Begin your first above.</div>`}</div>`;
+    ${S.sessions.length?S.sessions.slice().reverse().slice(0,12).map(s=>`<div class="q${s.hr&&s.hr.length?' hashr':''}"${s.hr&&s.hr.length?` data-hrid="${s.id}"`:''}><div class="qbody"><div class="qt">${esc(s.name)}${s.hr&&s.hr.length?' <span style="color:var(--z-max)">❤️</span>':''}</div><div class="qmeta"><span class="mono" style="color:var(--cyan)">${s.day}</span>${s.hrStats?`<span class="mono" style="color:var(--z-max)">${s.hrStats.avg} avg · ${s.hrStats.max} max</span>`:`<span>${s.count} logged</span>`}${s.note?`<span style="color:var(--muted)">“${esc(s.note)}”</span>`:''}</div></div>${s.hr&&s.hr.length?'<span style="color:var(--cyan)">→</span>':''}</div>`).join(''):`<div class="empty">No sessions yet. Begin your first above.</div>`}</div>`;
 }
 function heatStrip(){let out='';for(let i=13;i>=0;i--){const d=new Date(Date.now()-i*864e5).toISOString().slice(0,10);const hit=S.sessions.some(s=>s.day===d);out+=`<i class="${hit?'hit':''}" style="height:${hit?(18+Math.random()*16):6}px" title="${d}"></i>`;}return out;}
 function programBlock(p){
@@ -709,11 +725,99 @@ function programBlock(p){
   </div>`;
 }
 function metricName(i){const m=S.metrics.find(x=>x.id===i);return m?m.name:'metric';}
+//================= HEART RATE (Polar H10 via Web Bluetooth) =================
+let _hr={device:null,char:null,samples:[],startMs:0,bpm:null,connected:false,saveT:null};
+function hrSupported(){ return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); }
+function hrZone(b){ return b>=174?['Max','var(--z-max)']:b>=154?['Tempo','var(--z-tempo)']:b>=139?['Zone 2','var(--z-z2)']:b>=124?['Recovery','var(--z-rec)']:['Easy','#8a93a6']; }
+async function hrConnect(){
+  if(!hrSupported()){ toast('HR needs Bluefy (iPhone) or Chrome (Android) — iOS Safari can\'t do Bluetooth'); return; }
+  try{
+    const dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+    _hr.device=dev; dev.addEventListener('gattserverdisconnected',hrOnDisconnect);
+    const server=await dev.gatt.connect();
+    const svc=await server.getPrimaryService('heart_rate');
+    const ch=await svc.getCharacteristic('heart_rate_measurement');
+    _hr.char=ch; await ch.startNotifications();
+    ch.addEventListener('characteristicvaluechanged',hrOnValue);
+    _hr.connected=true; if(!_hr.startMs)_hr.startMs=Date.now();
+    renderView(); toast('❤️ HR monitor connected — recording');
+  }catch(e){ toast('Could not connect — strap on and awake?'); }
+}
+function hrOnValue(ev){
+  const v=ev.target.value, flags=v.getUint8(0);
+  const hr=(flags&1)?v.getUint16(1,true):v.getUint8(1);
+  if(!hr||hr<25||hr>240)return;
+  _hr.bpm=hr;
+  const t=Math.round((Date.now()-_hr.startMs)/1000);
+  const last=_hr.samples[_hr.samples.length-1];
+  if(!last||t>last.t)_hr.samples.push({t,hr});
+  hrLiveUpdate();
+  if(S.session){S.session.hr=_hr.samples;clearTimeout(_hr.saveT);_hr.saveT=setTimeout(save,4000);}
+}
+function hrLiveUpdate(){
+  const el=document.getElementById('hrBpm'); if(el)el.textContent=_hr.bpm||'–';
+  const zn=document.getElementById('hrZone'); if(zn&&_hr.bpm){const[n,c]=hrZone(_hr.bpm);zn.textContent=n;zn.style.color=c;}
+  const g=document.getElementById('hrLiveChart'); if(g)g.innerHTML=hrChartSVG(_hr.samples,true);
+}
+function hrOnDisconnect(){ _hr.connected=false; if(active==='train'&&S.session)renderView(); }
+function hrStop(){ try{ if(_hr.char)_hr.char.stopNotifications(); if(_hr.device&&_hr.device.gatt&&_hr.device.gatt.connected)_hr.device.gatt.disconnect(); }catch(e){} _hr.connected=false; }
+function hrReset(){ hrStop(); _hr={device:null,char:null,samples:[],startMs:0,bpm:null,connected:false,saveT:null}; }
+function decimate(s,max){ if(s.length<=max)return s; const step=Math.ceil(s.length/max); return s.filter((_,i)=>i%step===0); }
+function hrStats(samples){
+  if(!samples||!samples.length)return null;
+  const hrs=samples.map(s=>s.hr);
+  const avg=Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length), max=Math.max(...hrs), min=Math.min(...hrs);
+  const durSec=samples[samples.length-1].t;
+  const z={easy:0,rec:0,z2:0,tempo:0,max:0};
+  const W=parseFloat(lastV('m_bw'))||80, A=28; let kcal=0;
+  for(let i=0;i<samples.length;i++){ const gap=i<samples.length-1?Math.max(1,samples[i+1].t-samples[i].t):1; const b=samples[i].hr;
+    const k=b>=174?'max':b>=154?'tempo':b>=139?'z2':b>=124?'rec':'easy'; z[k]+=gap;
+    kcal+=Math.max(0,(-55.0969+0.6309*b+0.1988*W+0.2017*A)/4.184)*(gap/60); }
+  return {avg,max,min,durSec,zones:z,kcal:Math.round(kcal)};
+}
+function hrChartSVG(samples,live){
+  if(!samples||samples.length<2) return `<div class="hrempty">${live?'Recording… your line builds as you move':'No heart rate recorded'}</div>`;
+  const W=330,H=150,padL=24,padB=12,padT=6;
+  const tMax=samples[samples.length-1].t||1, hrs=samples.map(s=>s.hr);
+  let yMin=Math.min(...hrs)-6, yMax=Math.max(...hrs)+6; yMin=Math.min(yMin,118); yMax=Math.max(yMax,178);
+  const x=t=>padL+(t/tMax)*(W-padL-4), y=b=>padT+(1-(b-yMin)/(yMax-yMin))*(H-padT-padB);
+  const bands=[[yMin,124,'#5a6273'],[124,139,'var(--z-rec)'],[139,154,'var(--z-z2)'],[154,174,'var(--z-tempo)'],[174,yMax,'var(--z-max)']];
+  let bg=''; bands.forEach(([lo,hi,c])=>{ const a=Math.max(lo,yMin),b=Math.min(hi,yMax); if(b<=a)return; bg+=`<rect x="${padL}" y="${y(b).toFixed(1)}" width="${W-padL-4}" height="${(y(a)-y(b)).toFixed(1)}" fill="${c}" opacity="0.16"/>`; });
+  const pts=samples.map(s=>`${x(s.t).toFixed(1)},${y(s.hr).toFixed(1)}`).join(' ');
+  const yl=[yMin,Math.round((yMin+yMax)/2),yMax].map(v=>`<text x="1" y="${(y(v)+3).toFixed(1)}" class="hrax">${Math.round(v)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="hrchart">${bg}<polyline points="${pts}" fill="none" stroke="#ef5f6b" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${yl}</svg>`;
+}
+function hrSection(){
+  if(!hrSupported()) return `<div class="hrsec"><div class="hrhead">❤️ Heart rate</div><div class="info" style="margin:0">Recording needs Web Bluetooth, which iOS Safari blocks. Open this app in <b>Bluefy</b> (iPhone) or <b>Chrome</b> (Android) to record HR, then sync it back.</div></div>`;
+  const has=_hr.connected||_hr.samples.length;
+  return `<div class="hrsec"><div class="hrhead">❤️ Heart rate <span class="n">${_hr.connected?'<span style="color:var(--z-max)">● recording</span>':(_hr.samples.length?'paused':'')}</span></div>
+    ${has?`<div class="hrlive"><div class="hrbig"><span id="hrBpm">${_hr.bpm||'–'}</span><span class="hru">bpm</span></div><div class="hrzone" id="hrZone"></div></div>
+      <div id="hrLiveChart">${hrChartSVG(_hr.samples,true)}</div>
+      ${_hr.connected?'':'<div class="field" style="margin-top:8px"><button class="btn ghost sm" id="hrConnectBtn">Reconnect strap</button></div>'}`
+    :`<div class="info" style="margin:0 0 10px">Strap on your Polar H10, then connect to record your heart rate for the whole session.</div>
+      <div class="field"><button class="btn block" id="hrConnectBtn">❤️ Connect HR monitor</button></div>`}
+  </div>`;
+}
+function openHrDetail(sid){
+  const s=S.sessions.find(x=>x.id===sid); if(!s||!s.hr||!s.hr.length)return;
+  const st=s.hrStats||hrStats(s.hr);
+  const zlabels=[['z2','Zone 2','var(--z-z2)'],['tempo','Tempo','var(--z-tempo)'],['max','Max','var(--z-max)'],['rec','Recovery','var(--z-rec)'],['easy','Easy','#8a93a6']];
+  const zbars=zlabels.filter(([k])=>st.zones[k]>0).map(([k,lab,c])=>`<div class="zrow"><span class="zlab" style="color:${c}">${lab}</span><span class="ztime">${fmtDur(st.zones[k])}</span></div>`).join('');
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(s.name)} · ${s.day}</div>
+    <div class="hrchart-wrap">${hrChartSVG(s.hr,false)}</div>
+    <div class="msummary" style="margin-top:10px"><div class="mbox"><div class="mv">${fmtDur(st.durSec)}</div><div class="ml">duration</div></div><div class="mbox"><div class="mv">${st.avg}</div><div class="ml">avg bpm</div></div><div class="mbox"><div class="mv" style="color:var(--z-max)">${st.max}</div><div class="ml">max bpm</div></div><div class="mbox"><div class="mv" style="color:var(--gold)">${st.kcal}</div><div class="ml">≈ kcal</div></div></div>
+    <div class="mexs" style="margin-top:12px">Time in zone</div>${zbars||'<div class="empty">—</div>'}
+    <div class="hint">Calories are an estimate from heart rate (no GPS — use Strava for distance &amp; pace).</div>
+    <div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('modalBack').classList.add('show');
+  document.getElementById('qClose').onclick=closeModal;
+}
 function sessionView(){
   const s=S.session;
   return `<div class="card sescard"><h2>🔴 Live Session <span class="n">${esc(s.name)}</span></h2>
     ${s.zone?`<div style="margin-bottom:10px">${zoneBadge(s.zone)}</div>`:''}
     ${s.exercises.map(e=>`<div class="exrow ${e.done?'done':''}" data-eid="${e.id}"><div class="check" data-act="exdone">✓</div><div class="qbody"><div class="nm">${esc(e.name)}</div><div class="sc">${esc(e.scheme)}</div></div>${e.unit?`<input type="number" step="0.01" class="exVal" placeholder="${esc(e.unit)}" value="${e.val??''}">`:''}</div>`).join('')}
+    ${hrSection()}
     <textarea id="sesNote" placeholder="How did it feel? Energy, acidosis, recovery…">${esc(s.note||'')}</textarea>
     <div class="field" style="margin-top:10px"><button class="btn block" id="finishBtn">✓ Finish · +${s.xp} XP</button></div>
     <div class="field"><button class="btn ghost sm" id="abandonBtn">Abandon</button></div></div>`;
@@ -1231,10 +1335,11 @@ const bind={
   },
   train(){
     if(S.session){
-      document.querySelectorAll('#view .exrow').forEach(el=>{const e=S.session.exercises.find(x=>x.id===el.dataset.eid);el.querySelector('[data-act=exdone]').onclick=()=>{e.done=!e.done;save();renderView();};const inp=el.querySelector('.exVal');if(inp)inp.onchange=()=>{e.val=inp.value;save();};});
+      document.querySelectorAll('#view .exrow').forEach(el=>{const e=S.session.exercises.find(x=>x.id===el.dataset.eid);if(!e)return;el.querySelector('[data-act=exdone]').onclick=()=>{e.done=!e.done;save();renderView();};const inp=el.querySelector('.exVal');if(inp)inp.onchange=()=>{e.val=inp.value;save();};});
       const note=document.getElementById('sesNote');note.onchange=()=>{S.session.note=note.value;save();};
+      const hc=document.getElementById('hrConnectBtn'); if(hc)hc.onclick=hrConnect;
       document.getElementById('finishBtn').onclick=finishSession;
-      document.getElementById('abandonBtn').onclick=()=>{S.session=null;save();renderView();};
+      document.getElementById('abandonBtn').onclick=()=>{hrReset();S.session=null;save();renderView();};
       return;
     }
     const p=activeProgram();
@@ -1247,6 +1352,7 @@ const bind={
       pb.querySelector('[data-act=toggle]').onclick=()=>{prog._open=!prog._open;renderView();};
       if(prog._open){const act=pb.querySelector('[data-act=activate]');if(act)act.onclick=()=>{S.programs.forEach(x=>x.active=false);prog.active=true;prog.queuePos=0;save();renderView();toast(prog.name+' active');};}
     });
+    document.querySelectorAll('#view .q.hashr[data-hrid]').forEach(el=>el.onclick=()=>openHrDetail(el.dataset.hrid));
   },
   alarm(){
     const aw=document.getElementById('aWake'),ws=document.getElementById('aWStart'),we=document.getElementById('aWEnd');
@@ -1364,7 +1470,10 @@ function beginSession(wid){const p=activeProgram();const nw=wid?workoutById(p,wi
 function finishSession(){
   const s=S.session,p=S.programs.find(x=>x.id===s.programId);
   s.exercises.forEach(e=>{if(e.link&&e.val!==''&&!isNaN(parseFloat(e.val))){const m=S.metrics.find(x=>x.id===e.link);if(m)m.log.push({day:today(),v:parseFloat(e.val)});}});
-  S.sessions.push({id:id(),day:today(),name:s.name,count:s.exercises.filter(e=>e.done||e.val!=='').length,note:s.note});
+  const hr=decimate(_hr.samples.slice(),600);
+  const hrSt=hr.length?hrStats(hr):null;
+  S.sessions.push({id:id(),day:today(),name:s.name,count:s.exercises.filter(e=>e.done||e.val!=='').length,note:s.note,hr,hrStats:hrSt});
+  hrReset();
   awardXp(s.xp);bumpCount('fight');
   if(p)p.queuePos++;
   // phase progression
