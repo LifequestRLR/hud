@@ -608,8 +608,10 @@ function fmt(n){return (Math.round(n*100)/100).toLocaleString();}
 const TABS=[{k:'camp',ic:'🥊',label:'Camp'},{k:'train',ic:'🏋️',label:'Train'},{k:'alarm',ic:'⏰',label:'Alarm'},{k:'cal',ic:'📅',label:'Agenda'},{k:'quests',ic:'🗡️',label:'Quests'},{k:'stats',ic:'📈',label:'Stats'},{k:'gold',ic:'💰',label:'Treasury'},{k:'mind',ic:'🧠',label:'Mind'},{k:'spirit',ic:'🕊️',label:'Spirit'}];
 let active='camp';
 function renderTabs(){
-  document.getElementById('tabs').innerHTML=TABS.map(t=>`<button class="tab ${t.k===active?'on':''}" data-k="${t.k}"><span>${t.ic}</span>${t.label}</button>`).join('');
+  const tb=document.getElementById('tabs');
+  tb.innerHTML=TABS.map(t=>`<button class="tab ${t.k===active?'on':''}" data-k="${t.k}"><span>${t.ic}</span>${t.label}</button>`).join('');
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{active=b.dataset.k;renderTabs();renderView();});
+  const on=tb.querySelector('.tab.on'); if(on)tb.scrollLeft=Math.max(0,on.offsetLeft-(tb.clientWidth-on.offsetWidth)/2);
 }
 function renderView(){
   const v=document.getElementById('view');v.classList.remove('view');void v.offsetWidth;v.classList.add('view');
