@@ -380,6 +380,11 @@
   .srbody p{font-size:14.5px;line-height:1.8;color:#e2e6dd;margin:0 0 13px}
   .srprompt{font-size:16.5px;line-height:1.6;color:#ece7da;margin-top:6px}
   @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}.phases{flex-direction:column}}
+  @media(min-width:760px){
+    .wrap{max-width:1080px;padding-left:22px;padding-right:22px}
+    #view{column-count:2;column-gap:20px}
+    #view>*{break-inside:avoid}
+  }
 </style>
 </head>
 <body>
