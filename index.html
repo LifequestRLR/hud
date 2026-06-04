@@ -184,6 +184,8 @@
   .reward-box{border:1px solid var(--gold-dim);border-radius:12px;background:linear-gradient(160deg,rgba(245,196,81,.10),transparent);padding:13px;margin:13px 0}
   .reward-box .rl{font-family:'Chakra Petch';font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
   .reward-box .rt{font-size:13.5px;line-height:1.55;color:#e8ecf7;margin-top:6px}
+  .sbinfo{font-size:13px;line-height:1.6;color:#d7dbe4;margin:10px 0;padding-left:11px;border-left:2px solid var(--cyan-dim)}
+  .sbinfo b{color:var(--ink)}
   .modal .mexs{font-family:'Chakra Petch';font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 
   /* GUIDED PLAYER */
@@ -1236,7 +1238,7 @@ const bind={
       return;
     }
     const p=activeProgram();
-    const b=document.getElementById('beginBtn');if(b)b.onclick=openSessionModal;
+    const b=document.getElementById('beginBtn');if(b)b.onclick=()=>openSessionModal();
     const cb=document.getElementById('coachBtn');if(cb)cb.onclick=()=>{const r=coachPick();if(r.workout)openSessionModal(r.workout.id,r.reason);};
     const sk=document.getElementById('skipBtn');if(sk)sk.onclick=()=>{p.queuePos++;save();renderView();toast('Skipped → next');};
     const sh=document.getElementById('shuffleBtn');if(sh)sh.onclick=()=>{p.order=shuffle(p.order);p.queuePos=0;save();renderView();};
@@ -1332,15 +1334,26 @@ function openSessionModal(wid,reason){
   const p=activeProgram();
   const nw=wid?workoutById(p,wid):nextWorkout(p);
   if(!nw)return;
+  const ZONE_INFO={
+    rec:'Recovery pace — easy movement that pushes blood and nutrients through tired muscle so it rebuilds. Should feel almost too easy.',
+    z2:'Zone 2, easy aerobic. The boring gold: it grows your engine — more mitochondria and capillaries — so you recover faster between explosive efforts. Nose-breathing pace.',
+    tempo:'Tempo / threshold — right at the edge of comfortable. This raises the point where you start to gas, so you can hold a hard pace longer before fading.',
+    max:'Max / VO2 — short, hard efforts. Lifts your ceiling and your ability to fire explosion after explosion deep into a fight.'
+  };
+  const ph=PHASES[S.phaseIdx]||PHASES[0];
+  const left=Math.max(0, ph.sessionsToClear - S.phaseSessions);
+  const zinfo=nw.zone?ZONE_INFO[nw.zone]:'';
   const mb=document.getElementById('modalBody');
   mb.innerHTML=`<div class="grab"></div>
     <div class="mlbl">Session briefing · ${esc(p.name)}</div>
     <div class="mname">${esc(nw.name)} ${zoneBadge(nw.zone)}</div>
     ${reason?`<div style="font-size:12.5px;color:var(--cyan);margin:2px 0 4px;line-height:1.5">🧭 Coach's pick — ${esc(reason)}.</div>`:''}
-    <div class="reward-box"><div class="rl">🎁 Reward — what this forges</div><div class="rt">${esc(nw.reward||'')}</div></div>
-    <div class="mexs">The session · +${nw.xp} XP</div>
-    ${nw.exercises.map(e=>`<div class="exrow" style="cursor:default"><div class="qbody"><div class="nm">${esc(e.name)}</div><div class="sc">${esc(e.scheme)}</div></div>${e.link?`<span class="zonebadge zone-z2">↳ ${esc(metricName(e.link))}</span>`:''}</div>`).join('')}
-    <div class="field" style="margin-top:14px"><button class="btn block" id="modalStart">▶ Start now · +${nw.xp} XP</button></div>
+    ${zinfo?`<div class="sbinfo"><b>The intensity.</b> ${esc(zinfo)}</div>`:''}
+    <div class="reward-box"><div class="rl">🎁 What this forges</div><div class="rt">${esc(nw.reward||'')}</div></div>
+    <div class="sbinfo"><b>Where it fits your arsenal.</b> Part of <b>${ph.icon} ${esc(ph.name)}</b> — ${esc(ph.blurb)} ${left>0?`${left} session${left===1?'':'s'} left to clear this phase.`:'Phase complete — keep sharpening.'}</div>
+    <div class="mexs">The session · ${nw.exercises.length} movements · +${nw.xp} XP</div>
+    ${nw.exercises.map(e=>`<div class="exrow" style="cursor:default"><div class="qbody"><div class="nm">${esc(e.name)}</div><div class="sc">${esc(e.scheme)}</div></div>${e.link?`<span class="zonebadge zone-z2">↳ logs ${esc(metricName(e.link))}</span>`:''}</div>`).join('')}
+    <div class="field" style="margin-top:14px"><button class="btn block" id="modalStart">▶ Start training · +${nw.xp} XP</button></div>
     <div class="field"><button class="btn ghost sm" id="modalClose">Close</button></div>`;
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('modalStart').onclick=()=>{closeModal();beginSession(nw.id);};
