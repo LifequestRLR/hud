@@ -1287,7 +1287,7 @@ const bind={
   },
   mind(){
     add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
-    add('mReview',()=>{const p=mindPick();if(p.concept)startTest(p.concept.id,true);});
+    add('mReview',()=>{const p=mindPick();if(!p.concept)return;const c=p.concept;if(c.quiz&&c.quiz.length)startTest(c.id,true);else if(backendOn())openWrite(c.id);else openLesson(c.id);});
     add('mReflect',openReflect); add('mReflect2',openReflect); add('mBrowse',openBrowse); add('mAiPick',aiCoachSuggest);
     document.querySelectorAll('#view .bookrow').forEach(el=>el.onclick=()=>openReader(el.dataset.bid));
     add('addBook',openAddBook);
@@ -1786,7 +1786,16 @@ function openLesson(id){
   const tt=document.getElementById('toTest'); if(tt)tt.onclick=()=>startTest(id,false);
   const tw=document.getElementById('toWrite'); if(tw)tw.onclick=()=>openWrite(id);
 }
-function startTest(id,isReview){const c=conceptById(id);if(!c)return;testState={c,qi:0,score:0,isReview};document.getElementById('modalBack').classList.add('show');renderQuestion();}
+function startTest(id,isReview){
+  const c=conceptById(id); if(!c)return;
+  if(!c.quiz||!c.quiz.length){ // AI-generated concepts have open questions, not multiple choice
+    if(backendOn()) return openWrite(id);
+    return openLesson(id);
+  }
+  testState={c,qi:0,score:0,isReview};
+  document.getElementById('modalBack').classList.add('show');
+  renderQuestion();
+}
 function renderQuestion(){
   const {c,qi}=testState; const q=c.quiz[qi];
   // build a shuffled display order of original option indices (Fisher-Yates)
