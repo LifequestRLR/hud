@@ -740,18 +740,36 @@ let _hr={device:null,char:null,samples:[],startMs:0,bpm:null,connected:false,sav
 function hrSupported(){ return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); }
 function hrZone(b){ return b>=174?['Max','var(--z-max)']:b>=154?['Tempo','var(--z-tempo)']:b>=139?['Zone 2','var(--z-z2)']:b>=124?['Recovery','var(--z-rec)']:['Easy','#8a93a6']; }
 function hrPill(){ return `<span class="hrpill"><span class="hr-beat" style="animation-duration:${_hr.bpm?(60/_hr.bpm).toFixed(2):'1'}s">❤️</span><span class="hr-bpm">${_hr.bpm||'–'}</span><span class="hru2">bpm</span></span>`; }
+function rememberStrap(id){ try{ S.hrDeviceId=id; save(); }catch(e){} }
+async function hrAttach(dev){
+  _hr.device=dev; dev.addEventListener('gattserverdisconnected',hrOnDisconnect);
+  const server=await dev.gatt.connect();
+  const svc=await server.getPrimaryService('heart_rate');
+  const ch=await svc.getCharacteristic('heart_rate_measurement');
+  _hr.char=ch; await ch.startNotifications();
+  ch.addEventListener('characteristicvaluechanged',hrOnValue);
+  _hr.connected=true; rememberStrap(dev.id);
+  renderHud(); renderView();
+}
+async function hrQuickReconnect(){
+  // tries to reconnect to a previously-approved strap WITHOUT the device chooser
+  if(!hrSupported()||!navigator.bluetooth.getDevices) return false;
+  try{
+    const known=await navigator.bluetooth.getDevices();
+    const dev=known.find(d=>d.id===S.hrDeviceId)||known[0];
+    if(!dev) return false;
+    await hrAttach(dev);
+    toast('❤️ Reconnected to your strap');
+    return true;
+  }catch(e){ return false; }
+}
 async function hrConnect(){
   if(!hrSupported()){ toast('HR needs Bluefy (iPhone) or Chrome (Android) — iOS Safari can\'t do Bluetooth'); return; }
+  if(await hrQuickReconnect()) return;          // one-tap: silent reconnect if the strap is remembered
   try{
     const dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
-    _hr.device=dev; dev.addEventListener('gattserverdisconnected',hrOnDisconnect);
-    const server=await dev.gatt.connect();
-    const svc=await server.getPrimaryService('heart_rate');
-    const ch=await svc.getCharacteristic('heart_rate_measurement');
-    _hr.char=ch; await ch.startNotifications();
-    ch.addEventListener('characteristicvaluechanged',hrOnValue);
-    _hr.connected=true;
-    renderHud(); renderView(); toast('❤️ HR monitor connected');
+    await hrAttach(dev);
+    toast('❤️ HR monitor connected');
   }catch(e){ toast('Could not connect — strap on and awake?'); }
 }
 function hrOnValue(ev){
