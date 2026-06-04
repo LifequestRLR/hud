@@ -193,6 +193,14 @@
   .hrlive{display:flex;align-items:baseline;gap:12px;margin-bottom:8px}
   .hrbig{font-family:'Chakra Petch';font-size:40px;font-weight:700;color:#ef5f6b;line-height:1}
   .hrbig .hru{font-size:14px;color:var(--muted);margin-left:4px}
+  @keyframes hbeat{0%,100%{transform:scale(1)}12%{transform:scale(1.32)}24%{transform:scale(1)}38%{transform:scale(1.16)}52%{transform:scale(1)}}
+  .hr-beat{display:inline-block;animation:hbeat 1s ease-in-out infinite;transform-origin:center;will-change:transform}
+  .hrpill{display:inline-flex;align-items:center;gap:6px;font-family:'Chakra Petch'}
+  .hrpill .hr-beat{font-size:20px}
+  .hrpill .hr-bpm{font-size:22px;font-weight:700;color:#ef5f6b}
+  .hrpill .hru2{font-size:11px;color:var(--muted)}
+  .hrpre{display:inline-flex;align-items:center}
+  .hudhr{display:flex;align-items:center;justify-content:center;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
   .hrzone{font-family:'Chakra Petch';font-size:15px;font-weight:600}
   .hrchart{width:100%;height:auto;display:block;background:#0c0f18;border:1px solid var(--line);border-radius:9px}
   .hrchart .hrax{font-family:'JetBrains Mono';font-size:7px;fill:var(--faint)}
@@ -595,7 +603,8 @@ function renderHud(){
         <div class="sub"><span class="streak">🔥 ${S.streak}d</span><span>·</span><span class="clock">${dateStr} · ${clock}</span><span>·</span><span style="color:var(--gold)">🎯 ${daysToFight()}d to target</span><button class="installpill" id="installBtn">Install</button></div></div></div>
     <div class="xpbar"><div class="meta"><span>XP ${L.into}/${L.need}</span><span>TOTAL ${S.totalXp}</span></div><div class="track"><div class="fill" style="width:${L.pct}%"></div></div></div>
     <div class="stats">${chip('🫁','VO2MAX',(lastV('m_vo2')??'–'))}${chip('💪','PULL/DIP',(lastV('m_pull')??'–')+'/'+(lastV('m_dip')??'–'))}${chip('⚖️','WEIGHT',(lastV('m_bw')??'79.6')+'kg')}${chip('🥊','SESSIONS',S.sessions.length)}</div>
-    <div class="accts"><button class="acct" id="acctDaily"><span class="aic">💳</span><span class="abal${_showBal?'':' masked'}">€${fmt(S.balance)}</span><span class="alab">DAILY</span></button><button class="acct" id="acctSav"><span class="aic">🏦</span><span class="abal${_showBal?'':' masked'}">€${fmt(S.savings.saved)}</span><span class="alab">SAVINGS</span></button><button class="acct eyebtn" id="balEye" title="Show/hide balances">${_showBal?'🙈':'👁'}</button></div>`;
+    <div class="accts"><button class="acct" id="acctDaily"><span class="aic">💳</span><span class="abal${_showBal?'':' masked'}">€${fmt(S.balance)}</span><span class="alab">DAILY</span></button><button class="acct" id="acctSav"><span class="aic">🏦</span><span class="abal${_showBal?'':' masked'}">€${fmt(S.savings.saved)}</span><span class="alab">SAVINGS</span></button><button class="acct eyebtn" id="balEye" title="Show/hide balances">${_showBal?'🙈':'👁'}</button></div>
+    ${_hr.connected?`<div class="hudhr">${hrPill()}<span class="hr-zone hrzone" style="margin-left:8px"></span></div>`:''}`;
   const ne=document.getElementById('nameEdit');
   ne.addEventListener('blur',()=>{S.name=ne.textContent.trim()||"Bilal";save();});
   ne.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ne.blur();}});
@@ -698,6 +707,7 @@ function viewTrain(){
       <div class="wname">${esc(nw.name)} ${zoneBadge(nw.zone)}</div>
       <div class="exlist">${nw.exercises.map(e=>`• ${esc(e.name)} <span style="color:var(--faint)">— ${esc(e.scheme)}</span>`).join('<br>')}</div>
       <button class="btn block" id="beginBtn">👁 View session · +${nw.xp} XP</button>
+      ${hrSupported()?`<div class="field" style="margin-top:8px">${_hr.connected?`<span class="hrpre">${hrPill()}<span class="hr-zone hrzone" style="margin-left:8px"></span></span><button class="btn ghost sm" id="hrDisc" style="margin-left:auto">disconnect</button>`:'<button class="btn ghost sm" id="hrConnectBtn">❤️ Connect HR before you start</button>'}</div>`:''}
       <div class="queue">${p.order.map((wid,i)=>{const w=workoutById(p,wid);return `<span class="qchip ${i===p.queuePos%p.order.length?'now':''}">${esc(w?w.name:'?')}</span>`;}).join('')}</div>
       <div class="field" style="margin-top:11px"><button class="btn ghost sm" id="coachBtn">🎯 Coach's pick</button><button class="btn ghost sm" id="skipBtn">Skip →</button><button class="btn ghost sm" id="shuffleBtn">⟳ Shuffle</button></div>
       <div class="hint">No fixed weekdays — it advances whenever you actually train. Work always wins: if a shift eats the session, do it before/after (see ⏰ Alarm).</div>
@@ -729,6 +739,7 @@ function metricName(i){const m=S.metrics.find(x=>x.id===i);return m?m.name:'metr
 let _hr={device:null,char:null,samples:[],startMs:0,bpm:null,connected:false,saveT:null};
 function hrSupported(){ return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); }
 function hrZone(b){ return b>=174?['Max','var(--z-max)']:b>=154?['Tempo','var(--z-tempo)']:b>=139?['Zone 2','var(--z-z2)']:b>=124?['Recovery','var(--z-rec)']:['Easy','#8a93a6']; }
+function hrPill(){ return `<span class="hrpill"><span class="hr-beat" style="animation-duration:${_hr.bpm?(60/_hr.bpm).toFixed(2):'1'}s">❤️</span><span class="hr-bpm">${_hr.bpm||'–'}</span><span class="hru2">bpm</span></span>`; }
 async function hrConnect(){
   if(!hrSupported()){ toast('HR needs Bluefy (iPhone) or Chrome (Android) — iOS Safari can\'t do Bluetooth'); return; }
   try{
@@ -739,8 +750,8 @@ async function hrConnect(){
     const ch=await svc.getCharacteristic('heart_rate_measurement');
     _hr.char=ch; await ch.startNotifications();
     ch.addEventListener('characteristicvaluechanged',hrOnValue);
-    _hr.connected=true; if(!_hr.startMs)_hr.startMs=Date.now();
-    renderView(); toast('❤️ HR monitor connected — recording');
+    _hr.connected=true;
+    renderHud(); renderView(); toast('❤️ HR monitor connected');
   }catch(e){ toast('Could not connect — strap on and awake?'); }
 }
 function hrOnValue(ev){
@@ -748,18 +759,17 @@ function hrOnValue(ev){
   const hr=(flags&1)?v.getUint16(1,true):v.getUint8(1);
   if(!hr||hr<25||hr>240)return;
   _hr.bpm=hr;
-  const t=Math.round((Date.now()-_hr.startMs)/1000);
-  const last=_hr.samples[_hr.samples.length-1];
-  if(!last||t>last.t)_hr.samples.push({t,hr});
+  if(S.session){ if(!_hr.startMs)_hr.startMs=Date.now(); const t=Math.round((Date.now()-_hr.startMs)/1000); const last=_hr.samples[_hr.samples.length-1]; if(!last||t>last.t)_hr.samples.push({t,hr}); S.session.hr=_hr.samples; clearTimeout(_hr.saveT); _hr.saveT=setTimeout(save,4000); }
   hrLiveUpdate();
-  if(S.session){S.session.hr=_hr.samples;clearTimeout(_hr.saveT);_hr.saveT=setTimeout(save,4000);}
 }
 function hrLiveUpdate(){
-  const el=document.getElementById('hrBpm'); if(el)el.textContent=_hr.bpm||'–';
-  const zn=document.getElementById('hrZone'); if(zn&&_hr.bpm){const[n,c]=hrZone(_hr.bpm);zn.textContent=n;zn.style.color=c;}
+  const dur=_hr.bpm?(60/_hr.bpm).toFixed(2)+'s':'1s';
+  document.querySelectorAll('.hr-bpm').forEach(e=>e.textContent=_hr.bpm||'–');
+  document.querySelectorAll('.hr-beat').forEach(e=>e.style.animationDuration=dur);
+  document.querySelectorAll('.hr-zone').forEach(e=>{if(_hr.bpm){const[n,c]=hrZone(_hr.bpm);e.textContent=n;e.style.color=c;}});
   const g=document.getElementById('hrLiveChart'); if(g)g.innerHTML=hrChartSVG(_hr.samples,true);
 }
-function hrOnDisconnect(){ _hr.connected=false; if(active==='train'&&S.session)renderView(); }
+function hrOnDisconnect(){ _hr.connected=false; renderHud(); if(active==='train')renderView(); }
 function hrStop(){ try{ if(_hr.char)_hr.char.stopNotifications(); if(_hr.device&&_hr.device.gatt&&_hr.device.gatt.connected)_hr.device.gatt.disconnect(); }catch(e){} _hr.connected=false; }
 function hrReset(){ hrStop(); _hr={device:null,char:null,samples:[],startMs:0,bpm:null,connected:false,saveT:null}; }
 function decimate(s,max){ if(s.length<=max)return s; const step=Math.ceil(s.length/max); return s.filter((_,i)=>i%step===0); }
@@ -789,14 +799,11 @@ function hrChartSVG(samples,live){
 }
 function hrSection(){
   if(!hrSupported()) return `<div class="hrsec"><div class="hrhead">❤️ Heart rate</div><div class="info" style="margin:0">Recording needs Web Bluetooth, which iOS Safari blocks. Open this app in <b>Bluefy</b> (iPhone) or <b>Chrome</b> (Android) to record HR, then sync it back.</div></div>`;
-  const has=_hr.connected||_hr.samples.length;
-  return `<div class="hrsec"><div class="hrhead">❤️ Heart rate <span class="n">${_hr.connected?'<span style="color:var(--z-max)">● recording</span>':(_hr.samples.length?'paused':'')}</span></div>
-    ${has?`<div class="hrlive"><div class="hrbig"><span id="hrBpm">${_hr.bpm||'–'}</span><span class="hru">bpm</span></div><div class="hrzone" id="hrZone"></div></div>
-      <div id="hrLiveChart">${hrChartSVG(_hr.samples,true)}</div>
-      ${_hr.connected?'':'<div class="field" style="margin-top:8px"><button class="btn ghost sm" id="hrConnectBtn">Reconnect strap</button></div>'}`
-    :`<div class="info" style="margin:0 0 10px">Strap on your Polar H10, then connect to record your heart rate for the whole session.</div>
-      <div class="field"><button class="btn block" id="hrConnectBtn">❤️ Connect HR monitor</button></div>`}
-  </div>`;
+  if(!_hr.connected && !_hr.samples.length) return `<div class="hrsec"><div class="hrhead">❤️ Heart rate <span class="n">not connected</span></div><div class="field"><button class="btn ghost sm" id="hrConnectBtn">❤️ Connect HR monitor</button></div></div>`;
+  return `<div class="hrsec"><div class="hrhead">❤️ Heart rate <span class="n">${_hr.connected?'<span style="color:var(--z-max)">● recording</span>':'paused'}</span></div>
+    <div class="hrlive">${hrPill()}<span class="hrzone hr-zone" style="margin-left:10px"></span></div>
+    <div id="hrLiveChart">${hrChartSVG(_hr.samples,true)}</div>
+    ${_hr.connected?'':'<div class="field" style="margin-top:8px"><button class="btn ghost sm" id="hrConnectBtn">Reconnect</button></div>'}</div>`;
 }
 function openHrDetail(sid){
   const s=S.sessions.find(x=>x.id===sid); if(!s||!s.hr||!s.hr.length)return;
@@ -1343,6 +1350,8 @@ const bind={
       return;
     }
     const p=activeProgram();
+    const hc=document.getElementById('hrConnectBtn');if(hc)hc.onclick=hrConnect;
+    const hd=document.getElementById('hrDisc');if(hd)hd.onclick=()=>{hrReset();renderHud();renderView();};
     const b=document.getElementById('beginBtn');if(b)b.onclick=()=>openSessionModal();
     const cb=document.getElementById('coachBtn');if(cb)cb.onclick=()=>{const r=coachPick();if(r.workout)openSessionModal(r.workout.id,r.reason);};
     const sk=document.getElementById('skipBtn');if(sk)sk.onclick=()=>{p.queuePos++;save();renderView();toast('Skipped → next');};
@@ -1466,7 +1475,7 @@ function openSessionModal(wid,reason){
   document.getElementById('modalClose').onclick=closeModal;
 }
 function closeModal(){document.getElementById('modalBack').classList.remove('show');}
-function beginSession(wid){const p=activeProgram();const nw=wid?workoutById(p,wid):nextWorkout(p);if(!nw)return;S.session={programId:p.id,workoutId:nw.id,name:nw.name,xp:nw.xp,zone:nw.zone,note:'',exercises:nw.exercises.map(e=>({id:e.id,name:e.name,scheme:e.scheme,unit:e.unit,link:e.link,val:'',done:false}))};save();renderView();}
+function beginSession(wid){const p=activeProgram();const nw=wid?workoutById(p,wid):nextWorkout(p);if(!nw)return;_hr.samples=[];_hr.startMs=0;S.session={programId:p.id,workoutId:nw.id,name:nw.name,xp:nw.xp,zone:nw.zone,note:'',exercises:nw.exercises.map(e=>({id:e.id,name:e.name,scheme:e.scheme,unit:e.unit,link:e.link,val:'',done:false}))};save();renderView();}
 function finishSession(){
   const s=S.session,p=S.programs.find(x=>x.id===s.programId);
   s.exercises.forEach(e=>{if(e.link&&e.val!==''&&!isNaN(parseFloat(e.val))){const m=S.metrics.find(x=>x.id===e.link);if(m)m.log.push({day:today(),v:parseFloat(e.val)});}});
