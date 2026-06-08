@@ -45,6 +45,7 @@
   .srow .chev{color:var(--muted);font-size:20px;line-height:1}
   .setback{display:inline-block;color:var(--cyan);font-family:'Chakra Petch';font-size:14px;cursor:pointer;padding:6px 2px;margin-bottom:2px}
   .settitle{font-family:'Chakra Petch';font-size:23px;margin:0 0 14px}
+  .setlbl{color:var(--muted);font-size:13px;align-self:center;flex:1}
   .reflrow{border-bottom:1px solid var(--line);padding:11px 2px;cursor:pointer}
   .reflrow:last-child{border:0}
   .reflrow .rfdt{font-family:'JetBrains Mono';font-size:10px;color:var(--faint)}
@@ -541,7 +542,7 @@ const DEFAULT={
   backend:{url:'', key:''},
   sync:{phrase:'', last:0},
   events:[], // imported calendar
-  alarm:{wakeBy:"07:00", workStart:"", workEnd:""},
+  alarm:{wakeBy:"07:00", workStart:"", workEnd:"", commute:35, preShift:30, getReady:30},
 };
 
 let S=structuredClone(DEFAULT), booted=false, saveT;
@@ -551,6 +552,7 @@ function normalizeState(){
   S.backend=S.backend||{url:'',key:''};
   S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
   S.sync=S.sync||{phrase:'',last:0};
+  S.alarm=S.alarm||{wakeBy:"07:00",workStart:"",workEnd:""}; if(S.alarm.commute==null)S.alarm.commute=35; if(S.alarm.preShift==null)S.alarm.preShift=30; if(S.alarm.getReady==null)S.alarm.getReady=30;
 }
 async function load(){
   try{ if(navigator.storage && navigator.storage.persist){ await navigator.storage.persist(); } }catch(e){}
@@ -695,7 +697,7 @@ function weekHTML(){
     <div class="hint">When the gym reopens, keep the app for the solo conditioning a coach can't watch (Z2, sprints) and let mat time cover skills.</div>`;
 }
 function viewSettings(){
-  const conn=backendOn();
+  const conn=backendOn(); const a=S.alarm;
   return `<div class="setback" id="setBack">‹ Back</div><h1 class="settitle">⚙ Settings</h1>
   <div class="card"><h2>🤖 AI tutor <span class="n">${conn?'connected':'off'}</span></h2>
     <div class="info" style="margin:0 0 10px">Powers live lessons, written-answer grading, the money coach and "go deeper." Your key stays on this device, never in the app's code.</div>
@@ -712,6 +714,12 @@ function viewSettings(){
     <div class="info" style="margin:0 0 10px">Your data lives on this device and survives app updates. Save a backup file now and then as your safety net (a new phone, an accidental clear).</div>
     <div class="field"><button class="btn ghost sm" id="dataExport">💾 Save backup</button><button class="btn ghost sm" id="dataImport">📂 Restore backup</button></div>
     <div class="hint">The backup is a file on your device — never uploaded (separate from encrypted sync).</div>
+  </div>
+  <div class="card"><h2>🚗 Daily routine <span class="n">for the alarm router</span></h2>
+    <div class="info" style="margin:0 0 10px">Used to work backward from when you must leave the house. Editable per day on the Alarm tab if a day's different.</div>
+    <div class="field"><span class="setlbl">Commute (min)</span><input id="setCommute" type="number" min="0" value="${a.commute}" style="width:80px"></div>
+    <div class="field"><span class="setlbl">At work early (min)</span><input id="setPreShift" type="number" min="0" value="${a.preShift}" style="width:80px"></div>
+    <div class="field"><span class="setlbl">Get-ready (min)</span><input id="setGetReady" type="number" min="0" value="${a.getReady}" style="width:80px"></div>
   </div>
   <div class="card"><h2>ℹ️ About</h2><div class="hint">LifeQuest — your private life-RPG. Data stays on your device; AI &amp; sync are optional and key-protected. Not financial or medical advice.</div></div>`;
 }
@@ -902,7 +910,7 @@ function fromMin(t){t=((t%1440)+1440)%1440;return String(Math.floor(t/60)).padSt
 function viewAlarm(){
   const a=S.alarm, p=activeProgram(), nw=nextWorkout(p);
   return `<div class="alarmcard"><h2>⏰ Alarm & Training Router</h2>
-    <div class="info" style="margin:0 0 10px">Tell me tomorrow's shift. Work wins — if training clashes with a <b>dienst</b>, I route it before or after, and tell you the alarm + bedtime to make it happen.</div>
+    <div class="info" style="margin:0 0 10px">Tell me tomorrow's shift. I work backward from when you must <b>leave the house</b> — using your commute (${a.commute}m) and pre-shift buffer (${a.preShift}m) from ⚙ Settings — so I only suggest a morning session if it genuinely fits, otherwise I route it after your shift.</div>
     <div class="field"><span style="color:var(--muted);font-size:12px;align-self:center;min-width:80px">Must be up by</span><input id="aWake" type="time" value="${a.wakeBy}" style="width:110px"></div>
     <div class="field"><span style="color:var(--muted);font-size:12px;align-self:center;min-width:80px">Shift start</span><input id="aWStart" type="time" value="${a.workStart}" style="width:110px"><span style="color:var(--muted);font-size:12px;align-self:center">end</span><input id="aWEnd" type="time" value="${a.workEnd}" style="width:110px"></div>
     <div class="field"><button class="btn block" id="briefBtn">⚡ Generate briefing</button></div>
@@ -915,32 +923,35 @@ function viewAlarm(){
 function generateBriefing(){
   const a=S.alarm, p=activeProgram(), nw=nextWorkout(p);
   const ws=toMin(a.workStart), we=toMin(a.workEnd), wake=toMin(a.wakeBy);
+  const commute=a.commute||0, buffer=a.preShift||0, ready=a.getReady||0;
   const sessName=nw?nw.name:"training";
   const isCardio=nw&&nw.zone;
-  let html='', slot='', alarm='', note='';
-  if(ws===null||we===null){
-    // no shift -> free day
+  const need=isCardio?45:30;            // minutes a worthwhile session needs
+  let slot='', alarm='', note='';
+  if(ws===null){
     slot='<span class="slotpill slot-before">Open day</span>';
     alarm=a.wakeBy;
-    note=`No shift entered — full freedom. Hit <b>${esc(sessName)}</b> when fresh, ideally morning.`;
+    note=`No shift entered — full freedom. Hit <b>${esc(sessName)}</b> when you're freshest, ideally morning.`;
   } else {
-    const beforeRoom = ws - wake;           // minutes between waking and shift
-    const needBefore = isCardio?90:75;       // rough session+commute window
-    if(beforeRoom>=needBefore+20){
+    const leave=ws-buffer-commute;                 // must be out the door
+    const amWindow=leave-wake-ready;               // real training time before leaving
+    const leaveStr=fromMin(leave);
+    if(amWindow>=need){
       slot='<span class="slotpill slot-before">Before work ✓</span>';
-      alarm=fromMin(ws-needBefore-20);
-      note=`Train <b>before</b> the shift. Wake <b>${alarm}</b> → ${esc(sessName)} → shower → clock in by ${a.workStart}.`;
-    } else {
-      // after work
-      const afterStart=fromMin(we+30);
-      slot='<span class="slotpill slot-blocked">Shift blocks AM</span> <span class="slotpill slot-after">After work ✓</span>';
       alarm=a.wakeBy;
-      const bed=fromMin(toMin(a.wakeBy)-(6*90+15));
-      note=`Not enough room before your shift, so <b>train after</b>: start ~<b>${afterStart}</b> once you're back. Keep alarm at <b>${a.wakeBy}</b>. To still get 7–9h, aim to be in bed by <b>${bed}</b> tonight.`;
-      if(isCardio) note+=` Tip: a Z2 run after a shift still counts — keep HR 139–154, don't chase pace when tired.`;
+      note=`Wake <b>${a.wakeBy}</b> → <b>${esc(sessName)}</b> (you've got ~${amWindow} min) → get ready → leave by <b>${leaveStr}</b> (≈${commute}m drive + ${buffer}m early) → clock in ${a.workStart}.`;
+    } else {
+      const afterStart=fromMin(we+commute+15);
+      const bed=fromMin(wake-(6*90+15));
+      const wakeForAM=fromMin(ws-buffer-commute-ready-need);
+      slot='<span class="slotpill slot-blocked">No AM room</span> <span class="slotpill slot-after">After work ✓</span>';
+      alarm=a.wakeBy;
+      note=`You must leave by <b>${leaveStr}</b> (${buffer}m early + ${commute}m drive), so waking at ${a.wakeBy} leaves only ~${Math.max(0,amWindow)} min — not enough. <b>Train after the shift</b> instead: ~<b>${afterStart}</b> once you're home. Keep your alarm at <b>${a.wakeBy}</b>; for 7–9h, be in bed by <b>${bed}</b>.`;
+      if(wakeForAM && toMin(wakeForAM)>=210) note+=`<br><span style="color:var(--muted)">Or, to train before work, you'd need to be up by <b>${wakeForAM}</b> — your call.</span>`;
+      if(isCardio) note+=`<br><span style="color:var(--muted)">A Z2 run after a shift still counts — keep HR 139–154, don't chase pace when tired.</span>`;
     }
   }
-  html=`<div class="briefing"><div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Tomorrow's plan</div>
+  const html=`<div class="briefing"><div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)">Tomorrow's plan</div>
     <div class="big">⏰ ${alarm}</div>
     <div style="margin:6px 0">${slot}</div>
     <div>${note}</div>
@@ -1416,6 +1427,8 @@ const bind={
     add('dataExport',exportData);
     const di=document.getElementById('dataImport'); if(di)di.onclick=()=>document.getElementById('backupFile').click();
     add('syncPushBtn',syncPush); add('syncPullBtn',syncPull); add('syncCfg',openSyncSettings);
+    const wireNum=(id,key)=>{const el=document.getElementById(id);if(el)el.onchange=()=>{const v=parseInt(el.value);S.alarm[key]=isNaN(v)?0:Math.max(0,v);save();};};
+    wireNum('setCommute','commute'); wireNum('setPreShift','preShift'); wireNum('setGetReady','getReady');
   },
   train(){
     if(S.session){
