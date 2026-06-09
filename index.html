@@ -52,6 +52,10 @@
   .reflrow .rfpv{font-size:13.5px;color:var(--ink);margin-top:3px}
   .refllist{max-height:52vh;overflow-y:auto}
   .refltext{font-size:14.5px;line-height:1.7;color:#e7e2d3;white-space:pre-wrap;margin-top:8px}
+  .qrecap{font-size:13px;line-height:1.55;color:var(--muted);background:var(--panel2);border-left:2px solid var(--cyan-dim);padding:9px 11px;border-radius:0 8px 8px 0}
+  .qwhy{font-size:12.5px;line-height:1.5;color:#cfd6e6;margin-top:8px}
+  .qwhy b{color:var(--cyan)}
+  .diffbadge{display:inline-block;font-family:'JetBrains Mono';font-size:9px;letter-spacing:.08em;text-transform:uppercase;border:1px solid;border-radius:5px;padding:1px 6px;vertical-align:middle}
   .xpbar{margin-top:13px}
   .xpbar .meta{display:flex;justify-content:space-between;font-family:'JetBrains Mono';font-size:10.5px;color:var(--muted);margin-bottom:5px}
   .track{height:9px;border-radius:6px;background:#0c0f18;border:1px solid var(--line);overflow:hidden}
@@ -548,7 +552,7 @@ const DEFAULT={
 let S=structuredClone(DEFAULT), booted=false, saveT;
 function normalizeState(){
   if(!S.events||!S.events.length){ S.events=SEED_EVENTS.slice(); }
-  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[];
+  S.mind=S.mind||{mp:0,subj:{},srs:{}}; S.mind.subj=S.mind.subj||{}; S.mind.srs=S.mind.srs||{}; S.mind.library=S.mind.library||[]; S.mind.reading=S.mind.reading||{}; S.mind.generated=S.mind.generated||[]; S.mind.revLog=S.mind.revLog||{day:'',n:0};
   S.backend=S.backend||{url:'',key:''};
   S.savings=S.savings||{name:"Emergency fund",target:1000,saved:0,log:[]}; S.savings.log=S.savings.log||[]; S.ledger=S.ledger||[]; S.ledger.forEach(t=>{if(!t.id)t.id=id();}); S.asOf=S.asOf||{daily:'',sav:''}; S.spirit=S.spirit||{notes:[]}; S.spirit.notes=S.spirit.notes||[];
   S.sync=S.sync||{phrase:'',last:0};
@@ -1492,7 +1496,7 @@ const bind={
   },
   mind(){
     add('mLearn',()=>{const p=mindPick();if(p.concept)openLesson(p.concept.id);});
-    add('mReview',()=>{const p=mindPick();if(!p.concept)return;const c=p.concept;if(c.quiz&&c.quiz.length)startTest(c.id,true);else if(backendOn())openWrite(c.id);else openLesson(c.id);});
+    add('mReview',()=>{const p=mindPick();if(p.concept)startTest(p.concept.id,true);});
     add('mReflect',openReflect); add('mReflect2',openReflect); add('mBrowse',openBrowse); add('mAiPick',aiCoachSuggest);
     document.querySelectorAll('#view .bookrow').forEach(el=>el.onclick=()=>openReader(el.dataset.bid));
     add('addBook',openAddBook);
@@ -1998,15 +2002,33 @@ function openAISettings(){
 }
 
 function mindLevel(xp){const per=100;return{lvl:Math.floor(xp/per)+1,into:xp%per,per,pct:Math.round((xp%per)/per*100)};}
-const BOX_DAYS=[0,1,3,7,16,35];
+const BOX_DAYS=[0,1,3,7,16,35,75];
 function dayNum(){return Math.floor(Date.now()/864e5);}
 function dueConcepts(){return Object.keys(S.mind.srs).filter(id=>conceptById(id)&&S.mind.srs[id].due<=dayNum());}
-function scheduleSRS(id,passed){const s=S.mind.srs[id]||{box:0,due:0};s.box=passed?Math.min(BOX_DAYS.length-1,s.box+1):1;s.due=dayNum()+BOX_DAYS[s.box];S.mind.srs[id]=s;}
-function mindPick(){
-  const due=dueConcepts(); if(due.length)return{type:'review',concept:conceptById(due[0]),reason:'a concept is due — lock it into long-term memory'};
+function scheduleSRS(id,passed,strong){
+  const s=S.mind.srs[id]||{box:0,due:0};
+  if(passed){ s.box=Math.min(BOX_DAYS.length-1, s.box+(strong?2:1)); }
+  else { s.box=1; if(s.owned)s.owned=false; }
+  s.due=dayNum()+BOX_DAYS[s.box];
+  S.mind.srs[id]=s;
+}
+function retireConcept(id){ S.mind.srs[id]={box:BOX_DAYS.length-1,due:dayNum()+30,owned:true}; save(); }
+function reviewsToday(){ const r=S.mind.revLog||{day:'',n:0}; return r.day===today()?r.n:0; }
+function bumpReviewToday(){ const r=S.mind.revLog||{day:'',n:0}; if(r.day!==today()){r.day=today();r.n=0;} r.n++; S.mind.revLog=r; }
+function firstNewConcept(){
   const counts={}; SUBJECTS.forEach(s=>counts[s.key]=0); Object.keys(S.mind.srs).forEach(id=>{const c=conceptById(id);if(c)counts[c.subject]++;});
   const order=SUBJECTS.slice().sort((a,b)=>counts[a.key]-counts[b.key]);
-  for(const s of order){const next=CONCEPTS.find(c=>c.subject===s.key&&!S.mind.srs[c.id]);if(next)return{type:'learn',concept:next,reason:'building your '+s.name+' track'};}
+  for(const s of order){const next=CONCEPTS.find(c=>c.subject===s.key&&!S.mind.srs[c.id]);if(next)return next;}
+  return null;
+}
+const REVIEW_CAP=3;
+function mindPick(){
+  const due=dueConcepts();
+  const newC=firstNewConcept();
+  // balance: after a few reviews, push new material so progress always happens
+  if(due.length && (reviewsToday()<REVIEW_CAP || !newC)) return{type:'review',concept:conceptById(due[0]),reason:'a concept is due — lock it into long-term memory'};
+  if(newC){const s=SUBJECTS.find(x=>x.key===newC.subject);return{type:'learn',concept:newC,reason:'building your '+(s?s.name:newC.subject)+' track'};}
+  if(due.length) return{type:'review',concept:conceptById(due[0]),reason:'a concept is due — lock it in'};
   return {type:'reflect',reason:"you're ahead on lessons — time to think"};
 }
 function currentPrompt(){return REFLECTS[Math.floor(Math.random()*REFLECTS.length)].prompt;}
@@ -2018,9 +2040,9 @@ function openLesson(id){
   const hasMC=c.quiz&&c.quiz.length;
   const tag=c.generated?'<span class="genbadge">✨ AI lesson</span>':'';
   let btns='';
-  if(hasMC) btns+=`<div class="field" style="margin-top:14px"><button class="btn block" id="toTest">Start quiz (multiple choice) →</button></div>`;
-  if(backendOn()) btns+=`<div class="field"${hasMC?'':' style="margin-top:14px"'}><button class="btn block" id="toWrite">✍️ Write your answer →</button></div>`;
-  if(!hasMC&&!backendOn()) btns+=`<div class="hint" style="margin-top:12px">Turn on the AI tutor (⚙ in Mind) to be tested on this lesson.</div>`;
+  const canTest=hasMC||backendOn();
+  if(canTest) btns+=`<div class="field" style="margin-top:14px"><button class="btn block" id="toTest">Start test →</button></div>`;
+  else btns+=`<div class="hint" style="margin-top:12px">Turn on the AI tutor in ⚙ Settings to be tested on this lesson.</div>`;
   mb.innerHTML=`<div class="grab"></div><div class="mlbl">${esc(subjName(c.subject))} · lesson ${tag}</div><div class="mname">${esc(c.title)}</div>
     <div class="lesson">${esc(c.lesson)}</div>
     ${btns}
@@ -2028,48 +2050,88 @@ function openLesson(id){
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
   const tt=document.getElementById('toTest'); if(tt)tt.onclick=()=>startTest(id,false);
-  const tw=document.getElementById('toWrite'); if(tw)tw.onclick=()=>openWrite(id);
 }
+function conceptRecap(c){ if(c.recap)return c.recap; const m=(c.lesson||'').match(/[^.!?]+[.!?]+/g); return m?m.slice(0,2).join(' ').trim():(c.lesson||'').slice(0,160); }
+function conceptDiff(c){ return (c.diff==='stretch')?['Stretch','var(--gold)']:['Core','var(--cyan)']; }
+function diffBadge(c){ const[l,col]=conceptDiff(c); return `<span class="diffbadge" style="border-color:${col};color:${col}">${l}</span>`; }
 function startTest(id,isReview){
   const c=conceptById(id); if(!c)return;
-  if(!c.quiz||!c.quiz.length){ // AI-generated concepts have open questions, not multiple choice
-    if(backendOn()) return openWrite(id);
-    return openLesson(id);
-  }
-  testState={c,qi:0,score:0,isReview};
+  const pool=(c.quiz||[]).slice();
+  for(let k=pool.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[pool[k],pool[j]]=[pool[j],pool[k]];}
+  const mc=pool.slice(0,2);
+  if(mc.length===0 && !backendOn()) return openLesson(id); // nothing to test offline
+  testState={c,isReview:isReview||!!S.mind.srs[id],mc,qi:0,mcScore:0,phase:'mc'};
   document.getElementById('modalBack').classList.add('show');
-  renderQuestion();
+  if(mc.length) renderMC(); else startOpenPhase();
 }
-function renderQuestion(){
-  const {c,qi}=testState; const q=c.quiz[qi];
-  // build a shuffled display order of original option indices (Fisher-Yates)
+function renderMC(){
+  const {c,qi,mc}=testState; const q=mc[qi];
   const order=q.options.map((_,i)=>i);
   for(let k=order.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[order[k],order[j]]=[order[j],order[k]];}
-  testState.order=order;
-  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · Q${qi+1}/${c.quiz.length}</div>
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · warm-up ${qi+1}/${mc.length}</div>
     <div class="qtext">${esc(q.q)}</div><div id="opts">${order.map(orig=>`<button class="opt" data-i="${orig}">${esc(q.options[orig])}</button>`).join('')}</div><div id="qfb"></div>`;
-  document.querySelectorAll('#opts .opt').forEach(b=>b.onclick=()=>answerQ(parseInt(b.dataset.i)));
+  document.querySelectorAll('#opts .opt').forEach(b=>b.onclick=()=>answerMC(parseInt(b.dataset.i)));
 }
-function answerQ(i){
-  const {c,qi}=testState; const q=c.quiz[qi]; const correct=i===q.answer;
-  if(correct)testState.score++;
+function answerMC(i){
+  const {c,qi,mc}=testState; const q=mc[qi]; const correct=i===q.answer;
+  if(correct)testState.mcScore++;
   document.querySelectorAll('#opts .opt').forEach(b=>{const orig=parseInt(b.dataset.i);b.disabled=true;if(orig===q.answer)b.classList.add('right');else if(orig===i)b.classList.add('wrong');});
-  const last=qi>=c.quiz.length-1;
-  document.getElementById('qfb').innerHTML=`<div class="fb ${correct?'fbok':'fbno'}">${correct?'✓ Correct':'✗ Not quite'}</div><div class="fbex">${esc(q.explain)}</div><div class="field" style="margin-top:12px"><button class="btn block" id="qnext">${last?'See result':'Next question →'}</button></div>`;
-  document.getElementById('qnext').onclick=()=>{if(last)finishTest();else{testState.qi++;renderQuestion();}};
+  const last=qi>=mc.length-1;
+  document.getElementById('qfb').innerHTML=`<div class="fb ${correct?'fbok':'fbno'}">${correct?'✓ Correct':'✗ Not quite'}</div><div class="fbex">${esc(q.explain||'')}</div><div class="field" style="margin-top:12px"><button class="btn block" id="qnext">${last?'Now think it through →':'Next →'}</button></div>`;
+  document.getElementById('qnext').onclick=()=>{if(last)startOpenPhase();else{testState.qi++;renderMC();}};
 }
-function finishTest(){
-  const {c,score,isReview}=testState; const total=c.quiz.length; const pass=score===total;
-  scheduleSRS(c.id,pass);
-  const mp=isReview?(pass?12:4):(pass?30:10);
-  S.mind.mp+=mp; S.mind.subj[c.subject]=(S.mind.subj[c.subject]||0)+mp;
-  awardXp(0); save();
+function startOpenPhase(){
+  const c=testState.c;
+  let q;
+  if(c.questions&&c.questions.length) q=c.questions[Math.floor(Math.random()*c.questions.length)];
+  else q="In your own words, explain "+c.title+" — and give a concrete example.";
+  testState.q=q; testState.phase='open';
+  if(!backendOn()){ return finalizeTest(testState.mc.length?Math.round(testState.mcScore/testState.mc.length*100):0,null); }
+  const why=c.why?`<div class="qwhy"><b>Why it matters:</b> ${esc(c.why)}</div>`:'';
+  document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · think ${diffBadge(c)}</div>
+    <div class="qrecap">${esc(conceptRecap(c))}</div>${why}
+    <div class="qtext" style="margin-top:10px">${esc(q)}</div>
+    <textarea id="wAns" placeholder="Answer in your own words — don't peek at the lesson…" style="margin-top:10px;min-height:120px"></textarea>
+    <div class="field" style="margin-top:10px"><button class="btn block" id="wSubmit">✍️ Submit for grading</button></div>
+    <div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+  document.getElementById('qClose').onclick=closeModal;
+  document.getElementById('wSubmit').onclick=submitTestWrite;
+}
+async function submitTestWrite(){
+  const {c,q}=testState; const ans=document.getElementById('wAns').value.trim();
+  if(ans.length<3){toast('Write a bit more first');return;}
+  modalLoading('Grading your answer…');
+  try{
+    const res=await backendCall('/grade',{concept:c.title+' — '+c.lesson,question:q,answer:ans,cheap:true});
+    const g=res.data||{}; const score=Math.max(0,Math.min(100,parseInt(g.score)||0));
+    finalizeTest(score,g);
+  }catch(e){
+    document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">Couldn't grade</div><div class="lesson">${esc(aiErrMsg(e))}</div><div class="field" style="margin-top:12px"><button class="btn block" id="wRetry">Try again</button></div><div class="field"><button class="btn ghost sm" id="qClose">Close</button></div>`;
+    document.getElementById('qClose').onclick=closeModal;
+    document.getElementById('wRetry').onclick=startOpenPhase;
+  }
+}
+function finalizeTest(score,g){
+  const {c,isReview,mc,mcScore}=testState;
+  const pass=score>=70, partial=score>=40&&score<70, strong=score>=90;
+  if(isReview)bumpReviewToday();
+  scheduleSRS(c.id,pass,strong);
+  const mp=isReview?(pass?12:partial?8:4):(pass?30:partial?18:10);
+  S.mind.mp+=mp; S.mind.subj[c.subject]=(S.mind.subj[c.subject]||0)+mp; save();
+  const verdict=pass?'✓ Solid understanding':partial?'~ Partly there':'✗ Not yet';
   const nextDue=S.mind.srs[c.id].due-dayNum();
+  const fb=g?`<div class="fbex" style="margin-top:12px">${esc(g.feedback||'')}</div>${(Array.isArray(g.missed)&&g.missed.length)?`<div class="fbex"><b>To sharpen:</b> ${esc(g.missed.map(x=>String(x)).join(' · '))}</div>`:''}`:'<div class="hint" style="margin-top:10px">Graded on your warm-up only — turn on the AI tutor in ⚙ Settings to grade your written answer too.</div>';
+  const mcLine=mc.length?`<div class="hint">Warm-up: ${mcScore}/${mc.length} correct.</div>`:'';
+  const retire=pass?`<div class="field" style="margin-top:8px"><button class="btn ghost sm" id="ownIt">✓ I own this — show only occasionally</button></div>`:'';
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">${esc(c.title)} · result</div>
-    <div class="mname">${score}/${total} ${pass?'· mastered':'· keep at it'}</div>
-    <div class="reward-box"><div class="rl">+${mp} MP · ${esc(subjName(c.subject))}</div><div class="rt">${pass?`Locked in. Next review in ${nextDue} day${nextDue===1?'':'s'} — spacing is what makes it stick.`:'Review scheduled for tomorrow — a second pass will cement it.'}</div></div>
+    <div class="mname">${score}/100 <span style="font-size:13px;color:var(--muted)">${verdict}</span></div>
+    <div class="scorebar"><i style="width:${score}%;background:${pass?'var(--green)':partial?'var(--gold)':'var(--red)'}"></i></div>
+    ${mcLine}${fb}
+    <div class="reward-box" style="margin-top:12px"><div class="rl">+${mp} MP · ${esc(subjName(c.subject))}</div><div class="rt">${pass?`Locked in. Next review in ${nextDue} day${nextDue===1?'':'s'}.`:'Review scheduled soon — another pass will cement it.'}</div></div>
+    ${retire}
     <div class="field" style="margin-top:8px"><button class="btn block" id="qClose">Done</button></div>`;
   document.getElementById('qClose').onclick=()=>{closeModal();renderHud();renderView();};
+  const oi=document.getElementById('ownIt'); if(oi)oi.onclick=()=>{retireConcept(c.id);toast("✓ Marked as owned — it'll only check in occasionally");closeModal();renderHud();renderView();};
   testState=null;
 }
 function openReflect(){
@@ -2096,7 +2158,7 @@ function openBrowse(){
   document.getElementById('modalBody').innerHTML=`<div class="grab"></div><div class="mlbl">All concepts</div>${list}<div class="field" style="margin-top:12px"><button class="btn ghost sm" id="qClose">Close</button></div>`;
   document.getElementById('modalBack').classList.add('show');
   document.getElementById('qClose').onclick=closeModal;
-  document.querySelectorAll('#modalBody .exrow[data-cid]').forEach(el=>el.onclick=()=>{const id=el.dataset.cid;const c=conceptById(id);const st=S.mind.srs[id];closeModal();setTimeout(()=>{if(st&&c&&c.quiz&&c.quiz.length)startTest(id,true);else if(st&&backendOn())openWrite(id);else openLesson(id);},80);});
+  document.querySelectorAll('#modalBody .exrow[data-cid]').forEach(el=>el.onclick=()=>{const id=el.dataset.cid;const c=conceptById(id);const st=S.mind.srs[id];closeModal();setTimeout(()=>{if(st)startTest(id,true);else openLesson(id);},80);});
 }
 
 //================= LIBRARY / E-BOOK READER =================
