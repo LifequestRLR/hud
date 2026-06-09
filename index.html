@@ -642,6 +642,7 @@ function fmt(n){return (Math.round(n*100)/100).toLocaleString();}
 //================= TABS =================
 const TABS=[{k:'camp',ic:'🥊',label:'Camp'},{k:'train',ic:'🏋️',label:'Train'},{k:'alarm',ic:'⏰',label:'Alarm'},{k:'cal',ic:'📅',label:'Agenda'},{k:'quests',ic:'🗡️',label:'Quests'},{k:'stats',ic:'📈',label:'Stats'},{k:'gold',ic:'💰',label:'Treasury'},{k:'mind',ic:'🧠',label:'Mind'},{k:'spirit',ic:'🕊️',label:'Spirit'}];
 let active='camp';
+const APP_VERSION='50';
 let _prevTab='camp';
 let _showBal=false;
 function renderTabs(){
@@ -725,7 +726,7 @@ function viewSettings(){
     <div class="field"><span class="setlbl">At work early (min)</span><input id="setPreShift" type="number" min="0" value="${a.preShift}" style="width:80px"></div>
     <div class="field"><span class="setlbl">Get-ready (min)</span><input id="setGetReady" type="number" min="0" value="${a.getReady}" style="width:80px"></div>
   </div>
-  <div class="card"><h2>ℹ️ About</h2><div class="hint">LifeQuest — your private life-RPG. Data stays on your device; AI &amp; sync are optional and key-protected. Not financial or medical advice.</div></div>`;
+  <div class="card"><h2>ℹ️ About <span class="n">v${APP_VERSION}</span></h2><div class="hint">LifeQuest — your private life-RPG · version ${APP_VERSION}. Data stays on your device; AI &amp; sync are optional and key-protected. Not financial or medical advice.</div></div>`;
 }
 function openSheet(kind){
   const mb=document.getElementById('modalBody');
@@ -2382,8 +2383,9 @@ const _pageCache={};
 function paginate(text){
   const paras=text.split(/\n\n+/); const pages=[]; let cur='';
   for(let p of paras){ p=p.trim(); if(!p)continue;
-    if((cur.length+p.length)>880 && cur){ pages.push(cur); cur=''; }
-    if(p.length>880){ let i=0; while(i<p.length){ pages.push(p.slice(i,i+880)); i+=880; } continue; }
+    // keep whole paragraphs together: start a new page if this paragraph won't fit,
+    // but never split a paragraph across pages (the reader scrolls if a page runs long)
+    if(cur && (cur.length+p.length)>820){ pages.push(cur); cur=''; }
     cur+=(cur?'\n\n':'')+p; }
   if(cur)pages.push(cur);
   return pages.length?pages:[text];
